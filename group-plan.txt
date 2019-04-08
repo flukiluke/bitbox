@@ -1,0 +1,21 @@
+COMP90015 Distributed Systems
+Project 1: Bitbox
+
+Transfiction Railways consists of these lovely people:
+Bosco Feng, Brody Taylor, Luke Ceddia <834076>, Rainer Selby
+
+Throughout late March:
+ - Setup Slack, Github & LMS team enrollment
+
+Meeting 4th April, 7:30pm via Google Hangouts
+ - All members present.
+ - Brief personal introductions.
+ - Get everyone on the same page about what the project is. Walkthrough the specification.
+ - Agree that report should be divided into one person writing each part.
+ - Some team experience with sockets & multithreading.
+ - Luke to write very basic threaded server skeleton (done as of 7th April).
+ - Project split from here on: ???
+
+
+
+
