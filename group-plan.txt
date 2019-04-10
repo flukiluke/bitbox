@@ -14,7 +14,8 @@ Meeting 4th April, 7:30pm via Google Hangouts
  - Agree that report should be divided into one person writing each part.
  - Some team experience with sockets & multithreading.
  - Luke to write very basic threaded server skeleton (done as of 7th April).
- - Project split from here on: ???
+ - Our next move: Brody to write handshake code.
+ - Once that is done, regroup and chart next course of action.
 
 
 
