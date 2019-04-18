@@ -34,25 +34,14 @@ public class Peer
     }
     
 	private static void establishInitialConnections() {
-		Socket socket = null;
 		String[] peers = Configuration.getConfigurationValue("peers").split(" ");
 		System.out.println(peers);
 		for(String peer : peers) {
-		try {
 			// TODO breadth first search if peer connection is full
 			String address = peer.split(":")[0];
-			Integer port = Integer.parseInt(peer.split(":")[1]);
-			socket = new Socket(address, port);
-			System.out.println("Connection established");
-			Connection connection = new Connection(socket);
-			connection.handshake();
+			int port = Integer.parseInt(peer.split(":")[1]);
+			Connection connection = new Connection(address, port);
             connections.add(connection);
-			
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
+	    }
 	}
 }
