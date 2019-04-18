@@ -21,6 +21,7 @@ import java.util.logging.Logger;
  */
 public class Connection extends Thread {
     private static Logger log = Logger.getLogger(ServerMain.class.getName());
+    private CommandProcessor commandProcessor;
     private Socket clientSocket;
     private BufferedWriter outStream;
     private BufferedReader inStream;
@@ -84,10 +85,10 @@ public class Connection extends Thread {
                 Document message = receiveMessageFromPeer();
                 String command = message.getString("command");
                 if (Commands.isRequest(command)) {
-                    processRequest(message);
+                    commandProcessor.handleRequest(message);
                 }
                 else if (Commands.isResponse(command)) {
-                    processResponse(message);
+                    commandProcessor.handleResponse(message);
                 }
                 else {
                     throw new BadMessageException("Unknown or illegal command " + command);
@@ -102,12 +103,22 @@ public class Connection extends Thread {
         }
     }
 
-    private void processRequest(Document message) {
-        log.info("Processed " + message.get("command") + " command");
+
+    private void sendMessageToPeer(Document message) throws IOException {
+        outStream.write(message.toJson() + "\n");
+        outStream.flush();
+        log.info("Sent message to peer: " + message);
     }
 
-    private void processResponse(Document message) {
-        log.info("Processed " + message.get("command") + " command");
+    private Document receiveMessageFromPeer() throws IOException {
+        String input = inStream.readLine();
+        if (input == null) {
+            throw new IOException();
+        }
+        Document doc = Document.parse(input);
+        log.info("Received message from peer: " + doc);
+        // Assume doc is valid - should have some kind of checking here
+        return doc;
     }
 
     private void sendHandshake() throws IOException, BadMessageException {
@@ -136,23 +147,6 @@ public class Connection extends Thread {
         sendMessageToPeer(reply);
     }
 
-    private void sendMessageToPeer(Document message) throws IOException {
-        outStream.write(message.toJson() + "\n");
-        outStream.flush();
-        log.info("Sent message to peer: " + message);
-    }
-
-    private Document receiveMessageFromPeer() throws IOException {
-        String input = inStream.readLine();
-        if (input == null) {
-            throw new IOException();
-        }
-        Document doc = Document.parse(input);
-        log.info("Received message from peer: " + doc);
-        // Assume doc is valid - should have some kind of checking here
-        return doc;
-    }
-
     private void terminateConnection(String errorMessage) {
         log.severe("Peer sent invalid message, terminating connection with prejudice");
         Document doc = new Document();
@@ -166,7 +160,7 @@ public class Connection extends Thread {
         }
     }
 
-    private class BadMessageException extends Exception {
+    public class BadMessageException extends Exception {
         public BadMessageException(String message) {
             super(message);
         }
