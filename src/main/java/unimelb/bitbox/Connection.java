@@ -38,44 +38,40 @@ public class Connection extends Thread {
         log.info("Start new IO thread for outgoing peer at " + address + ":" + port);
         try {
             clientSocket = new Socket(address, port);
-            if (clientSocket == null) {
-                throw new IOException();
-            }
-            outStream = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream(), "UTF-8"));
-            inStream = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-            sendHandshake();
-        }
-        catch (IOException e) {
-            log.severe("Setting up new peer conection failed, IO thread exiting");
+        } catch (IOException e) {
+            log.severe("Socket creation failed, IO thread exiting");
             return;
         }
-        catch (BadMessageException e) {
-            log.severe("Peer sent invalid message, terminating connection with prejudice");
-            terminateConnection(e.getMessage());
-            return;
-        }
-        start();
+        initialise(true);
     }
 
     /**
-     * This constructor starts a new thread. This is for accepting incoming connections.
+     * This is for accepting incoming connections.
      *
      * @param clientSocket A socket from accept() connected to the peer
      */
     public Connection(Socket clientSocket) {
         log.info("Start new IO thread for incoming peer at " + clientSocket.getInetAddress());
         this.clientSocket = clientSocket;
+        initialise(false);
+    }
+
+    private void initialise(boolean initiator) {
         try {
             outStream = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream(), "UTF-8"));
             inStream = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-            receiveHandshake();
+            if (initiator) {
+                sendHandshake();
+            }
+            else {
+                receiveHandshake();
+            }
         }
         catch (IOException e) {
             log.severe("Setting up new peer connection failed, IO thread exiting");
             return;
         }
         catch (BadMessageException e) {
-            log.severe("Peer sent invalid message, terminating connection with prejudice");
             terminateConnection(e.getMessage());
         }
         start();
@@ -102,7 +98,6 @@ public class Connection extends Thread {
             log.severe("Communication to " + clientSocket.getInetAddress() + " failed, IO thread exiting");
         }
         catch (BadMessageException e) {
-            log.severe("Peer sent invalid message, terminating connection with prejudice");
             terminateConnection(e.getMessage());
         }
     }
@@ -117,11 +112,8 @@ public class Connection extends Thread {
 
     private void sendHandshake() throws IOException, BadMessageException {
         Document doc = new Document();
-        Document localHostPort = new Document();
-        localHostPort.append("host", Configuration.getConfigurationValue("advertisedName"));
-        localHostPort.append("port", Integer.parseInt(Configuration.getConfigurationValue("port")));
         doc.append("command", Commands.HANDSHAKE_REQUEST);
-        doc.append("hostPort", localHostPort);
+        doc.append("hostPort", Configuration.getLocalHostPort());
         sendMessageToPeer(doc);
 
         Document reply = receiveMessageFromPeer();
@@ -137,12 +129,10 @@ public class Connection extends Thread {
             throw new BadMessageException("Peer did not open with handshake request");
         }
         remoteHostPort = new HostPort((Document)request.get("hostPort"));
+
         Document reply = new Document();
         reply.append("command", Commands.HANDSHAKE_RESPONSE);
-        Document localHostPort = new Document();
-        localHostPort.append("host", Configuration.getConfigurationValue("advertisedName"));
-        localHostPort.append("port", Integer.parseInt(Configuration.getConfigurationValue("port")));
-        reply.append("hostPort", localHostPort);
+        reply.append("hostPort", Configuration.getLocalHostPort());
         sendMessageToPeer(reply);
     }
 
@@ -164,6 +154,7 @@ public class Connection extends Thread {
     }
 
     private void terminateConnection(String errorMessage) {
+        log.severe("Peer sent invalid message, terminating connection with prejudice");
         Document doc = new Document();
         doc.append("command", Commands.INVALID_PROTOCOL);
         doc.append("message", errorMessage);
