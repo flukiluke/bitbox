@@ -25,7 +25,7 @@ public class Connection extends Thread {
     private Socket clientSocket;
     private BufferedWriter outStream;
     private BufferedReader inStream;
-    private HostPort remoteHostPort;
+    public HostPort remoteHostPort;
 
     /**
      * This constructor initiates a connection to a peer. It does not return until
