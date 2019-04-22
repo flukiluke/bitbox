@@ -87,6 +87,10 @@ public class Document {
 	public String toJson(){
 		return obj.toJSONString();
 	}
+
+	public String toString() {
+	    return toJson();
+    }
 	
 	public static Document parse(String json) {
 		JSONParser parser = new JSONParser();
