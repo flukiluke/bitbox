@@ -51,6 +51,13 @@ public class Configuration {
         return properties.getProperty(key);
     }
 
+    public static Document getLocalHostPort() {
+        Document localHostPort = new Document();
+        localHostPort.append("host", Configuration.getConfigurationValue("advertisedName"));
+        localHostPort.append("port", Integer.parseInt(Configuration.getConfigurationValue("port")));
+        return localHostPort;
+    }
+
     // private constructor to prevent initialization
     private Configuration() {
     }
