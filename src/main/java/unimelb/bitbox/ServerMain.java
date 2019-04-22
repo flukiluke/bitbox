@@ -24,8 +24,17 @@ public class ServerMain implements FileSystemObserver {
 	}
 
     @Override
-    public void processFileSystemEvent(FileSystemEvent fileSystemEvent) {
-
+    public void processFileSystemEvent(FileSystemEvent fileSystemEvent){
+        switch (fileSystemEvent.event) {
+            case FILE_CREATE:
+                for (Connection connection: connections) {
+                    try {
+                        connection.sendCreateFile(fileSystemEvent);
+                    } catch (IOException e) {
+                        System.exit(0);
+                    }
+                }
+        }
     }
 
 	private void listenForNewConnections() throws IOException {
@@ -34,7 +43,8 @@ public class ServerMain implements FileSystemObserver {
             log.info("Waiting for peer connection");
             Socket clientSocket = serverSocket.accept();
             reapConnections();
-            Connection connection = new Connection(clientSocket);
+            Connection connection = new Connection(clientSocket, fileSystemManager);
+            // TODO restrict the maximum number of connections
             connections.add(connection);
             reapConnections();
             showConnections();

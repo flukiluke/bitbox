@@ -2,6 +2,8 @@ package unimelb.bitbox;
 
 import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
+import unimelb.bitbox.util.FileSystemManager;
+import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
 import unimelb.bitbox.util.HostPort;
 
 import java.io.BufferedReader;
@@ -25,6 +27,7 @@ public class Connection extends Thread {
     private Socket clientSocket;
     private BufferedWriter outStream;
     private BufferedReader inStream;
+    private FileSystemManager fileSystemManager;
     public HostPort remoteHostPort;
 
     /**
@@ -51,9 +54,11 @@ public class Connection extends Thread {
      *
      * @param clientSocket A socket from accept() connected to the peer
      */
-    public Connection(Socket clientSocket) {
+    public Connection(Socket clientSocket, FileSystemManager fileSystemManager) {
         log.info("Start new IO thread for incoming peer at " + clientSocket.getInetAddress());
+        this.fileSystemManager = fileSystemManager;
         this.clientSocket = clientSocket;
+        this.commandProcessor = new CommandProcessor(fileSystemManager);
         initialise(false);
     }
 
@@ -82,13 +87,16 @@ public class Connection extends Thread {
     public void run() {
         try {
             while (true) {
-                Document message = receiveMessageFromPeer();
-                String command = message.getString("command");
+                Document replyMsg = new Document();
+                Document receivedMsg = receiveMessageFromPeer();
+                String command = receivedMsg.getString("command");
                 if (Commands.isRequest(command)) {
-                    commandProcessor.handleRequest(message);
+                    replyMsg = commandProcessor.handleRequest(receivedMsg);
+                    sendMessageToPeer(replyMsg);
                 }
                 else if (Commands.isResponse(command)) {
-                    commandProcessor.handleResponse(message);
+                    //TODO add file bytes request functionality here
+                    commandProcessor.handleResponse(receivedMsg);
                 }
                 else {
                     throw new BadMessageException("Unknown or illegal command " + command);
@@ -132,6 +140,14 @@ public class Connection extends Thread {
             throw new BadMessageException("Peer did not respond with handshake response, responded with " + reply.getString("command"));
         }
         remoteHostPort = new HostPort((Document)reply.get("hostPort"));
+    }
+
+    public void sendCreateFile(FileSystemEvent fileSystemEvent) throws IOException{
+        Document doc = new Document();
+        doc.append("command", Commands.FILE_CREATE_REQUEST);
+        doc.append("fileDescriptor", fileSystemEvent.fileDescriptor.toDoc());
+        doc.append("pathName", fileSystemEvent.path);
+        sendMessageToPeer(doc);
     }
 
     private void receiveHandshake() throws IOException, BadMessageException {
