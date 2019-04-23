@@ -29,6 +29,7 @@ public class Connection extends Thread {
     private BufferedReader inStream;
     private FileSystemManager fileSystemManager;
     public HostPort remoteHostPort;
+    public boolean initialised = false;
 
     /**
      * This constructor initiates a connection to a peer. It does not return until
@@ -80,7 +81,9 @@ public class Connection extends Thread {
         catch (BadMessageException e) {
             terminateConnection(e.getMessage());
         }
+        initialised = true;
         start();
+        // Everything up to here is synchronous with the constructor's caller
     }
 
     @Override
