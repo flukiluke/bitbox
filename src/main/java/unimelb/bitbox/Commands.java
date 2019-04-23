@@ -40,10 +40,20 @@ public class Commands {
     };
 
     public static boolean isRequest(String command) {
+        for (int i = 0; i < requests.length; i++) {
+            if (requests[i].equals(command)) {
+                return true;
+            }
+        }
         return false;
     }
 
     public static boolean isResponse(String command) {
+        for (int i = 0; i < responses.length; i++) {
+            if (responses[i].equals(command)) {
+                return true;
+            }
+        }
         return true;
     }
 }
