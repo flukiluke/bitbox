@@ -19,7 +19,9 @@ public class ServerMain implements FileSystemObserver {
 
     public ServerMain(List<Connection> connections) throws NumberFormatException, NoSuchAlgorithmException, IOException {
 		this.connections = connections;
-		fileSystemManager=new FileSystemManager(Configuration.getConfigurationValue("path"),this);
+		for (Connection connection : connections) {
+            connection.setFileSystemManager(fileSystemManager);
+        }
 		listenForNewConnections();
 	}
 

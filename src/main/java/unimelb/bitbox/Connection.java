@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.logging.Logger;
 
 /**
@@ -90,12 +91,14 @@ public class Connection extends Thread {
     public void run() {
         try {
             while (true) {
-                Document replyMsg = new Document();
+                ArrayList<Document> replyMsgs = new ArrayList<Document>();
                 Document receivedMsg = receiveMessageFromPeer();
                 String command = receivedMsg.getString("command");
                 if (Commands.isRequest(command)) {
-                    replyMsg = commandProcessor.handleRequest(receivedMsg);
-                    sendMessageToPeer(replyMsg);
+                    replyMsgs = commandProcessor.handleRequest(receivedMsg);
+                    for (Document msg : replyMsgs) {
+                        sendMessageToPeer(msg);
+                    }
                 }
                 else if (Commands.isResponse(command)) {
                     //TODO add file bytes request functionality here
@@ -183,5 +186,10 @@ public class Connection extends Thread {
         public BadMessageException(String message) {
             super(message);
         }
+    }
+
+    public void setFileSystemManager (FileSystemManager fileSystemManager) {
+        this.fileSystemManager = fileSystemManager;
+        this.commandProcessor = new CommandProcessor(fileSystemManager);
     }
 }
