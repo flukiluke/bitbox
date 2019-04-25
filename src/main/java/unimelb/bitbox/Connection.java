@@ -152,7 +152,19 @@ public class Connection extends Thread {
      */
     public void sendFileReq(FileSystemEvent fileSystemEvent) throws IOException{
         Document doc = new Document();
-        doc.append(Commands.COMMAND, Commands.FILE_CREATE_REQUEST);
+        String command;
+
+        // determine correct request
+        if (fileSystemEvent.event == FileSystemManager.EVENT.FILE_CREATE) {
+            command = Commands.FILE_CREATE_REQUEST;
+        } else if (fileSystemEvent.event == FileSystemManager.EVENT.FILE_DELETE) {
+            command = Commands.FILE_DELETE_REQUEST;
+        } else {
+            command = Commands.FILE_MODIFY_REQUEST;
+        }
+
+        // write request message
+        doc.append(Commands.COMMAND, command);
         doc.append(Commands.FILE_DESCRIPTOR, fileSystemEvent.fileDescriptor.toDoc());
         doc.append(Commands.PATH_NAME, fileSystemEvent.path);
         sendMessageToPeer(doc);
@@ -165,7 +177,17 @@ public class Connection extends Thread {
      */
     public void sendDirReq(FileSystemEvent fileSystemEvent) throws IOException{
         Document doc = new Document();
-        doc.append(Commands.COMMAND, Commands.FILE_CREATE_REQUEST);
+        String command;
+
+        // determine correct request
+        if (fileSystemEvent.event == FileSystemManager.EVENT.DIRECTORY_CREATE) {
+            command = Commands.DIRECTORY_CREATE_REQUEST;
+        } else {
+            command = Commands.DIRECTORY_DELETE_REQUEST;
+        }
+
+        // write request message
+        doc.append(Commands.COMMAND, command);
         doc.append(Commands.PATH_NAME, fileSystemEvent.path);
         sendMessageToPeer(doc);
     }
