@@ -94,12 +94,12 @@ public class Connection extends Thread {
                 Document receivedMsg = receiveMessageFromPeer();
                 String command = receivedMsg.getString(Commands.COMMAND);
                 if (Commands.isRequest(command)) {
-                    replyMsg = commandProcessor.handleRequest(receivedMsg);
+                    replyMsg = this.commandProcessor.handleRequest(receivedMsg);
                     sendMessageToPeer(replyMsg);
                 }
                 else if (Commands.isResponse(command)) {
                     //TODO add file bytes request functionality here
-                    commandProcessor.handleResponse(receivedMsg);
+                    this.commandProcessor.handleResponse(receivedMsg);
                 }
                 else {
                     throw new BadMessageException("Unknown or illegal command " + command);
