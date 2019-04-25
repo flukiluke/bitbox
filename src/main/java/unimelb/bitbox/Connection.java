@@ -90,9 +90,9 @@ public class Connection extends Thread {
     public void run() {
         try {
             while (true) {
-                Document replyMsg = new Document();
+                Document replyMsg;
                 Document receivedMsg = receiveMessageFromPeer();
-                String command = receivedMsg.getString("command");
+                String command = receivedMsg.getString(Commands.COMMAND);
                 if (Commands.isRequest(command)) {
                     replyMsg = commandProcessor.handleRequest(receivedMsg);
                     sendMessageToPeer(replyMsg);
@@ -134,34 +134,34 @@ public class Connection extends Thread {
 
     private void sendHandshake() throws IOException, BadMessageException {
         Document doc = new Document();
-        doc.append("command", Commands.HANDSHAKE_REQUEST);
+        doc.append(Commands.COMMAND, Commands.HANDSHAKE_REQUEST);
         doc.append("hostPort", Configuration.getLocalHostPort());
         sendMessageToPeer(doc);
 
         Document reply = receiveMessageFromPeer();
-        if (!reply.get("command").equals(Commands.HANDSHAKE_RESPONSE)) {
-            throw new BadMessageException("Peer did not respond with handshake response, responded with " + reply.getString("command"));
+        if (!reply.get(Commands.COMMAND).equals(Commands.HANDSHAKE_RESPONSE)) {
+            throw new BadMessageException("Peer did not respond with handshake response, responded with " + reply.getString(Commands.COMMAND));
         }
         remoteHostPort = new HostPort((Document)reply.get("hostPort"));
     }
 
     public void sendCreateFile(FileSystemEvent fileSystemEvent) throws IOException{
         Document doc = new Document();
-        doc.append("command", Commands.FILE_CREATE_REQUEST);
-        doc.append("fileDescriptor", fileSystemEvent.fileDescriptor.toDoc());
-        doc.append("pathName", fileSystemEvent.path);
+        doc.append(Commands.COMMAND, Commands.FILE_CREATE_REQUEST);
+        doc.append(Commands.FILE_DESCRIPTOR, fileSystemEvent.fileDescriptor.toDoc());
+        doc.append(Commands.PATH_NAME, fileSystemEvent.path);
         sendMessageToPeer(doc);
     }
 
     private void receiveHandshake() throws IOException, BadMessageException {
         Document request = receiveMessageFromPeer();
-        if (!request.get("command").equals(Commands.HANDSHAKE_REQUEST)) {
+        if (!request.get(Commands.COMMAND).equals(Commands.HANDSHAKE_REQUEST)) {
             throw new BadMessageException("Peer did not open with handshake request");
         }
         remoteHostPort = new HostPort((Document)request.get("hostPort"));
 
         Document reply = new Document();
-        reply.append("command", Commands.HANDSHAKE_RESPONSE);
+        reply.append(Commands.COMMAND, Commands.HANDSHAKE_RESPONSE);
         reply.append("hostPort", Configuration.getLocalHostPort());
         sendMessageToPeer(reply);
     }
@@ -169,7 +169,7 @@ public class Connection extends Thread {
     private void terminateConnection(String errorMessage) {
         log.severe("Peer sent invalid message, terminating connection with prejudice");
         Document doc = new Document();
-        doc.append("command", Commands.INVALID_PROTOCOL);
+        doc.append(Commands.COMMAND, Commands.INVALID_PROTOCOL);
         doc.append("message", errorMessage);
         try {
             sendMessageToPeer(doc);

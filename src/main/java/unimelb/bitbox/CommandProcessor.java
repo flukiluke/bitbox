@@ -9,7 +9,6 @@ import java.util.Map;
 
 public class CommandProcessor {
     private FileSystemManager fileSystemManager;
-    private Map<String, List<String[]>> validFields = new HashMap<String, List<String[]>>();
 
     public CommandProcessor(FileSystemManager fileSystemManager) {
         this.fileSystemManager = fileSystemManager;
@@ -17,38 +16,56 @@ public class CommandProcessor {
 
     public Document handleRequest(Document msg) {
         Document replyMsg = new Document();
-        switch(msg.getString("command")) {
+        String request = msg.getString(Commands.COMMAND); // request received
+        String response = Commands.INVALID_PROTOCOL; // default response
+        String message = checkFieldsComplete(request, msg); // message field
+
+        //check fields are complete
+        if (!message.equals("")) {
+            replyMsg.append(Commands.COMMAND, response);
+            replyMsg.append(Commands.MESSAGE, message);
+            return replyMsg;
+        }
+
+        switch(request) {
             case Commands.FILE_CREATE_REQUEST:
-                String command, message;
+                System.out.println("yes");
+                response = Commands.FILE_CREATE_RESPONSE;
                 Boolean success = false;
-                command = Commands.INVALID_PROTOCOL;
-                if (!msg.containsKey("command")) {
-                    message = missingField("command");
-                } else if (!msg.containsKey("fileDescriptor")) {
-                    message = missingField("fileDescriptor");
-                } else if (!msg.containsKey("pathName")) {
-                    message = missingField("pathName");
+
+                if (!fileSystemManager.isSafePathName(msg.getString("pathName"))) {
+                    message = "unsafe pathname";
+                } else if (!fileSystemManager.fileNameExists(msg.getString("pathName"))) {
+                    message = "pathname already exists";
                 } else {
-                    command = Commands.FILE_CREATE_RESPONSE;
-                    if (!fileSystemManager.isSafePathName(msg.getString("pathName"))) {
-                        message = "unsafe pathname";
-                    } else if (!fileSystemManager.fileNameExists(msg.getString("pathName"))) {
-                        message = "pathname already exists";
-                    } else {
-                        message = "file loader ready";
-                        success = true;
-                    }
+                    message = "file loader ready";
+                    success = true;
                 }
-                replyMsg.append("command", command);
-                if (command.equals(Commands.FILE_CREATE_RESPONSE)) {
-                    replyMsg.append("fileDescriptor",
-                            Document.parse(msg.getString("fileDescriptor")));
-                    replyMsg.append("pathName", msg.getString("pathName"));
-                    replyMsg.append("status", success.toString());
-                }
-                replyMsg.append("message", message);
+
+                replyMsg.append(Commands.COMMAND, response);
+                replyMsg.append(Commands.FILE_DESCRIPTOR,
+                        (Document) msg.get(Commands.FILE_DESCRIPTOR));
+                replyMsg.append(Commands.PATH_NAME, msg.getString(Commands.PATH_NAME));
+                replyMsg.append(Commands.STATUS, success.toString());
+                replyMsg.append(Commands.MESSAGE, message);
+                break;
         }
         return replyMsg;
+    }
+
+    /**
+     * Checks if any fields are missing
+     * @param command the protocol of the message
+     * @param msg the JSON message being received
+     * @return
+     */
+    private String checkFieldsComplete(String command, Document msg) {
+        for (String field: (String[]) Commands.validFields.get(command)) {
+            if (!msg.containsKey(field)) {
+                return missingField(field);
+            }
+        }
+        return "";
     }
 
     private String missingField(String field) {
@@ -56,7 +73,7 @@ public class CommandProcessor {
     }
 
     public void handleResponse(Document message) {
-        switch(message.getString("command")) {
+        switch(message.getString(Commands.COMMAND)) {
             //Do stuff
         }
     }
