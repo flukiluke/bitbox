@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.logging.Logger;
 
 /**
@@ -76,7 +77,7 @@ public class Connection extends Thread {
             if (isIncomingConnection) {
                 success = receiveHandshake();
             } else {
-                sendHandshake();
+                success = sendHandshake();
             }
             if(!success) {
                 // Connection will be reaped eventually because initialised == false
@@ -135,17 +136,22 @@ public class Connection extends Thread {
         return doc;
     }
 
-    private void sendHandshake() throws IOException, BadMessageException {
+    private boolean sendHandshake() throws IOException, BadMessageException {
         Document doc = new Document();
         doc.append("command", Commands.HANDSHAKE_REQUEST);
         doc.append("hostPort", Configuration.getLocalHostPort());
         sendMessageToPeer(doc);
 
         Document reply = receiveMessageFromPeer();
+        if (reply.get("command").equals(Commands.CONNECTION_REFUSED)) {
+            Peer.discoveredPeers((ArrayList)reply.get("peers"));
+            return false;
+        }
         if (!reply.get("command").equals(Commands.HANDSHAKE_RESPONSE)) {
             throw new BadMessageException("Peer did not respond with handshake response, responded with " + reply.getString("command"));
         }
         remoteHostPort = new HostPort((Document)reply.get("hostPort"));
+        return true;
     }
 
     public void sendCreateFile(FileSystemEvent fileSystemEvent) throws IOException {

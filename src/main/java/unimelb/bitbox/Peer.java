@@ -8,11 +8,14 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import unimelb.bitbox.util.Configuration;
+import unimelb.bitbox.util.Document;
+import unimelb.bitbox.util.HostPort;
 
 public class Peer 
 {
 	private static Logger log = Logger.getLogger(Peer.class.getName());
 	private static List<Connection> connections = Collections.synchronizedList(new ArrayList<>());
+	private static List<HostPort> knownPeers = new ArrayList<>();
 	
     public static void main( String[] args ) throws IOException, NumberFormatException, NoSuchAlgorithmException
     {
@@ -22,6 +25,15 @@ public class Peer
 
         Configuration.getConfiguration();
         Configuration.parseCmdLineArgs(args);
+
+        String[] peers = Configuration.getConfigurationValue("peers").split(" ");
+        String address;
+        int port;
+        for(String peer : peers) {
+            address = peer.split(":")[0];
+            port = Integer.parseInt(peer.split(":")[1]);
+            knownPeers.add(new HostPort(address, port));
+        }
         
         establishInitialConnections();
         
@@ -30,14 +42,17 @@ public class Peer
     }
     
 	private static void establishInitialConnections() {
-		String[] peers = Configuration.getConfigurationValue("peers").split(" ");
-		System.out.println(peers);
-		for(String peer : peers) {
-			// TODO breadth first search if peer connection is full
-			String address = peer.split(":")[0];
-			int port = Integer.parseInt(peer.split(":")[1]);
-			Connection connection = new Connection(address, port);
+		for(HostPort peer : knownPeers) {
+			Connection connection = new Connection(peer.host, peer.port);
             connections.add(connection);
 	    }
 	}
+
+    public static void discoveredPeers(List<Document> peers) {
+        for (Document doc : peers) {
+            System.out.println("Added " + doc + " to knownHosts");
+            /* TODO: Add to knownPeers and make sure iteration in
+               establishInitialConnections works properly */
+        }
+    }
 }
