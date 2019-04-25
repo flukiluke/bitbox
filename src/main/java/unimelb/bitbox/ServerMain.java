@@ -39,10 +39,11 @@ public class ServerMain implements FileSystemObserver {
 
 	private void listenForNewConnections() throws IOException {
         ServerSocket serverSocket = new ServerSocket(Integer.parseInt(Configuration.getConfigurationValue("port")));
+        reapConnections();
+        showConnections();
         while (true) {
             log.info("Waiting for peer connection");
             Socket clientSocket = serverSocket.accept();
-            reapConnections();
             Connection connection = new Connection(clientSocket, fileSystemManager);
             // TODO restrict the maximum number of connections
             connections.add(connection);
@@ -52,7 +53,7 @@ public class ServerMain implements FileSystemObserver {
     }
 
 	private void reapConnections() {
-	    connections.removeIf(c -> c.getState() == Thread.State.TERMINATED);
+	    connections.removeIf(c -> !c.initialised || c.getState() == Thread.State.TERMINATED);
     }
 
     private void showConnections() {

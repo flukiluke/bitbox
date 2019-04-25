@@ -7,6 +7,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 import java.util.logging.Logger;
 
 /**
@@ -25,7 +27,7 @@ public class Configuration {
     // the configuration file is stored in the root of the class path as a .properties file
     private static final String CONFIGURATION_FILE = "configuration.properties";
 
-    private static final Properties properties;
+    private static Properties properties;
 
     // use static initializer to read the configuration file when the class is loaded
     static {
@@ -62,4 +64,16 @@ public class Configuration {
     private Configuration() {
     }
 
+    public static void parseCmdLineArgs(String[] args) {
+        // Expect a series of --x=y arguments
+        Pattern pattern = Pattern.compile("^--(.+)=(.*)$");
+        for (String arg : args) {
+            Matcher match = pattern.matcher(arg);
+            if (!match.matches()) {
+                log.warning("Argument " + arg + " is not understandable, ignoring");
+                continue;
+            }
+            properties.setProperty(match.group(1), match.group(2));
+        }
+    }
 }
