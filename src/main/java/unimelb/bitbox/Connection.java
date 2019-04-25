@@ -90,7 +90,7 @@ public class Connection extends Thread {
     public void run() {
         try {
             while (true) {
-                Document replyMsg;
+                Document replyMsg = new Document();
                 Document receivedMsg = receiveMessageFromPeer();
                 String command = receivedMsg.getString(Commands.COMMAND);
                 if (Commands.isRequest(command)) {

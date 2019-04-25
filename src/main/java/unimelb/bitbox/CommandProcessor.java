@@ -12,7 +12,7 @@ public class CommandProcessor {
         this.fileSystemManager = fileSystemManager;
     }
 
-    public Document handleRequest(Document msg) throws IOException {
+    public Document handleRequest(Document msg) {
         Document replyMsg = new Document();
         String request = msg.getString(Commands.COMMAND); // request received
         String response = Commands.INVALID_PROTOCOL; // default response
@@ -85,8 +85,12 @@ public class CommandProcessor {
                 } else {
                     lastModified = fileDescriptor.getLong(Commands.LAST_MODIFIED);
                     md5 = fileDescriptor.getString(Commands.MD5);
-                    success = fileSystemManager.modifyFileLoader(pathName, md5, lastModified);
                     message = "file loader ready";
+                    try {
+                        success = fileSystemManager.modifyFileLoader(pathName, md5, lastModified);
+                    } catch (IOException e) {
+                        message = "trouble accessing file IOException thrown";
+                    }
                     if (!success) {
                         message = "there was a problem modifying the file";
                     }
@@ -132,6 +136,12 @@ public class CommandProcessor {
 
         }
         return replyMsg;
+    }
+
+    public void handleResponse(Document message) {
+        switch(message.getString(Commands.COMMAND)) {
+            //Do stuff
+        }
     }
 
     /**
@@ -195,11 +205,5 @@ public class CommandProcessor {
      */
     private String missingField(String field) {
         return "message must contain a " + field + " field as string";
-    }
-
-    public void handleResponse(Document message) {
-        switch(message.getString(Commands.COMMAND)) {
-            //Do stuff
-        }
     }
 }
