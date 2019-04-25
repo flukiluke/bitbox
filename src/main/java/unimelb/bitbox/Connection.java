@@ -145,10 +145,27 @@ public class Connection extends Thread {
         remoteHostPort = new HostPort((Document)reply.get("hostPort"));
     }
 
-    public void sendCreateFile(FileSystemEvent fileSystemEvent) throws IOException{
+    /**
+     * Sends a request involving file
+     * @param fileSystemEvent the file event that occurred
+     * @throws IOException if an I/O error occurs
+     */
+    public void sendFileReq(FileSystemEvent fileSystemEvent) throws IOException{
         Document doc = new Document();
         doc.append(Commands.COMMAND, Commands.FILE_CREATE_REQUEST);
         doc.append(Commands.FILE_DESCRIPTOR, fileSystemEvent.fileDescriptor.toDoc());
+        doc.append(Commands.PATH_NAME, fileSystemEvent.path);
+        sendMessageToPeer(doc);
+    }
+
+    /**
+     * Sends a request involving directory
+     * @param fileSystemEvent the directory event that occurred
+     * @throws IOException if an I/O error occurs
+     */
+    public void sendDirReq(FileSystemEvent fileSystemEvent) throws IOException{
+        Document doc = new Document();
+        doc.append(Commands.COMMAND, Commands.FILE_CREATE_REQUEST);
         doc.append(Commands.PATH_NAME, fileSystemEvent.path);
         sendMessageToPeer(doc);
     }

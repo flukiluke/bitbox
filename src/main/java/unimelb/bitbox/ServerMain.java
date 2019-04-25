@@ -23,18 +23,54 @@ public class ServerMain implements FileSystemObserver {
 		listenForNewConnections();
 	}
 
+    /**
+     * Sends a request based on the event that occurred
+     * @param fileSystemEvent the event that occurred
+     */
     @Override
     public void processFileSystemEvent(FileSystemEvent fileSystemEvent){
-        switch (fileSystemEvent.event) {
-            case FILE_CREATE:
-                for (Connection connection: connections) {
-                    try {
-                        connection.sendCreateFile(fileSystemEvent);
-                    } catch (IOException e) {
-                        System.exit(0);
-                    }
+        for (Connection connection: connections) {
+            try {
+                // send a request involving a file
+                if (isFileEvent(fileSystemEvent.event)) {
+                    connection.sendFileReq(fileSystemEvent);
                 }
+
+                // send a request involving a directory
+                if (isDirEvent(fileSystemEvent.event)) {
+                    connection.sendDirReq(fileSystemEvent);
+                }
+            } catch (IOException e) {
+                System.exit(0);
+            }
         }
+    }
+
+    /**
+     * Chccks if the event involves a file
+     * @param event the event that occurred
+     * @return true if event involves a file
+     */
+    private boolean isFileEvent(FileSystemManager.EVENT event) {
+        if (event == FileSystemManager.EVENT.FILE_CREATE ||
+                event == FileSystemManager.EVENT.FILE_MODIFY ||
+                event == FileSystemManager.EVENT.FILE_DELETE ) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Chccks if the event involves a directory
+     * @param event the event that occurred
+     * @return true if event involves a directory
+     */
+    private boolean isDirEvent(FileSystemManager.EVENT event) {
+        if (event == FileSystemManager.EVENT.DIRECTORY_CREATE ||
+                event == FileSystemManager.EVENT.DIRECTORY_DELETE ) {
+            return true;
+        }
+        return false;
     }
 
 	private void listenForNewConnections() throws IOException {

@@ -31,9 +31,9 @@ public class CommandProcessor {
             return replyMsg;
         }
 
+        response = msg.getString(Commands.COMMAND);
         switch(request) {
             case Commands.FILE_CREATE_REQUEST:
-                response = msg.getString(Commands.COMMAND);
                 fileDescriptor = (Document) msg.get(Commands.FILE_DESCRIPTOR);
                 pathName = msg.getString(Commands.PATH_NAME);
                 success = false;
@@ -51,7 +51,6 @@ public class CommandProcessor {
                 break;
 
             case Commands.FILE_DELETE_REQUEST:
-                response = msg.getString(Commands.COMMAND);
                 fileDescriptor = (Document) msg.get(Commands.FILE_DESCRIPTOR);
                 pathName = msg.getString(Commands.PATH_NAME);
                 success = false;
@@ -74,7 +73,6 @@ public class CommandProcessor {
                 break;
 
             case Commands.FILE_MODIFY_REQUEST:
-                response = msg.getString(Commands.COMMAND);
                 fileDescriptor = (Document) msg.get(Commands.FILE_DESCRIPTOR);
                 pathName = msg.getString(Commands.PATH_NAME);
                 success = false;
@@ -97,11 +95,41 @@ public class CommandProcessor {
                 break;
 
             case Commands.DIRECTORY_CREATE_REQUEST:
+                pathName = msg.getString(Commands.PATH_NAME);
+                success = false;
 
+                if (fileSystemManager.isSafePathName(pathName)) {
+                    message = "unsafe pathname given";
+                } else if (fileSystemManager.dirNameExists(pathName)) {
+                    message = "pathname already exists";
+                } else {
+                    success = fileSystemManager.makeDirectory(pathName);
+                    message = "directory created";
+                    if (!success) {
+                        message = "there was a problem creating the directory";
+                    }
+                }
+                replyMsg = dir_related_reply(response, pathName, message, success);
                 break;
 
             case Commands.DIRECTORY_DELETE_REQUEST:
+                pathName = msg.getString(Commands.PATH_NAME);
+                success = false;
+
+                if (fileSystemManager.isSafePathName(pathName)) {
+                    message = "unsafe pathname given";
+                } else if (!fileSystemManager.dirNameExists(pathName)) {
+                    message = "pathname does not exist";
+                } else {
+                    success = fileSystemManager.deleteDirectory(pathName);
+                    message = "directory deleted";
+                    if (!success) {
+                        message = "there was a problem deleting the directory";
+                    }
+                }
+                replyMsg = dir_related_reply(response, pathName, message, success);
                 break;
+
         }
         return replyMsg;
     }
@@ -124,6 +152,24 @@ public class CommandProcessor {
         replyMsg.append(Commands.PATH_NAME, pathName);
         replyMsg.append(Commands.STATUS, success.toString());
         replyMsg.append(Commands.MESSAGE, message);
+        return replyMsg;
+    }
+
+    /**
+     * Writes the reply message for all directory related requests e.g. DIR_CREATE, DIR_DELETE
+     * @param response the protocol request
+     * @param pathName the path of the file
+     * @param success whether the request was successfully fulfilled
+     * @param message details of why the request succeeded/failed
+     * @return the reply message
+     */
+    private Document dir_related_reply(String response, String pathName, String message,
+                                       Boolean success) {
+        Document replyMsg = new Document();
+        replyMsg.append(Commands.COMMAND, response);
+        replyMsg.append(Commands.PATH_NAME, pathName);
+        replyMsg.append(Commands.MESSAGE, message);
+        replyMsg.append(Commands.STATUS, success.toString());
         return replyMsg;
     }
 
