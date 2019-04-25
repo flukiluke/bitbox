@@ -4,12 +4,12 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
-import unimelb.bitbox.util.Configuration;
-import unimelb.bitbox.util.FileSystemManager;
-import unimelb.bitbox.util.FileSystemObserver;
+import unimelb.bitbox.util.*;
 import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
 
 public class ServerMain implements FileSystemObserver {
@@ -37,6 +37,17 @@ public class ServerMain implements FileSystemObserver {
         }
     }
 
+    public long countIncomingConnections() {
+        return connections.stream().filter(c -> c.isIncomingConnection).count();
+    }
+
+    public ArrayList<Document> getPeerHostPorts() {
+        return (ArrayList<Document>)connections.stream()
+                .map(c -> c.remoteHostPort.toDoc())
+                .filter(hp -> hp != null)
+                .collect(Collectors.toList());
+    }
+
 	private void listenForNewConnections() throws IOException {
         ServerSocket serverSocket = new ServerSocket(Integer.parseInt(Configuration.getConfigurationValue("port")));
         reapConnections();
@@ -44,15 +55,14 @@ public class ServerMain implements FileSystemObserver {
         while (true) {
             log.info("Waiting for peer connection");
             Socket clientSocket = serverSocket.accept();
-            Connection connection = new Connection(clientSocket, fileSystemManager);
-            // TODO restrict the maximum number of connections
+            Connection connection = new Connection(this, clientSocket, fileSystemManager);
             connections.add(connection);
             reapConnections();
             showConnections();
         }
     }
 
-	private void reapConnections() {
+    private void reapConnections() {
 	    connections.removeIf(c -> !c.initialised || c.getState() == Thread.State.TERMINATED);
     }
 

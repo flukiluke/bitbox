@@ -28,8 +28,10 @@ public class Connection extends Thread {
     private BufferedWriter outStream;
     private BufferedReader inStream;
     private FileSystemManager fileSystemManager;
+    private ServerMain server;
     public HostPort remoteHostPort;
     public boolean initialised = false;
+    public boolean isIncomingConnection;
 
     /**
      * This constructor initiates a connection to a peer. It does not return until
@@ -40,6 +42,7 @@ public class Connection extends Thread {
      * @param port Network port to connect on
      */
     public Connection(String address, int port) {
+        isIncomingConnection = false;
         log.info("Start new IO thread for outgoing peer at " + address + ":" + port);
         try {
             clientSocket = new Socket(address, port);
@@ -47,7 +50,7 @@ public class Connection extends Thread {
             log.severe("Socket creation failed, IO thread exiting");
             return;
         }
-        initialise(true);
+        initialise();
     }
 
     /**
@@ -55,30 +58,34 @@ public class Connection extends Thread {
      *
      * @param clientSocket A socket from accept() connected to the peer
      */
-    public Connection(Socket clientSocket, FileSystemManager fileSystemManager) {
+    public Connection(ServerMain server, Socket clientSocket, FileSystemManager fileSystemManager) {
+        isIncomingConnection = true;
         log.info("Start new IO thread for incoming peer at " + clientSocket.getInetAddress());
+        this.server = server;
         this.fileSystemManager = fileSystemManager;
         this.clientSocket = clientSocket;
         this.commandProcessor = new CommandProcessor(fileSystemManager);
-        initialise(false);
+        initialise();
     }
 
-    private void initialise(boolean initiator) {
+    private void initialise() {
+        boolean success = true;
         try {
             outStream = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream(), "UTF-8"));
             inStream = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-            if (initiator) {
+            if (isIncomingConnection) {
+                success = receiveHandshake();
+            } else {
                 sendHandshake();
             }
-            else {
-                receiveHandshake();
+            if(!success) {
+                // Connection will be reaped eventually because initialised == false
+                return;
             }
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             log.severe("Setting up new peer connection failed, IO thread exiting");
             return;
-        }
-        catch (BadMessageException e) {
+        } catch (BadMessageException e) {
             terminateConnection(e.getMessage());
         }
         initialised = true;
@@ -90,26 +97,22 @@ public class Connection extends Thread {
     public void run() {
         try {
             while (true) {
-                Document replyMsg = new Document();
+                Document replyMsg;
                 Document receivedMsg = receiveMessageFromPeer();
                 String command = receivedMsg.getString("command");
                 if (Commands.isRequest(command)) {
                     replyMsg = commandProcessor.handleRequest(receivedMsg);
                     sendMessageToPeer(replyMsg);
-                }
-                else if (Commands.isResponse(command)) {
+                } else if (Commands.isResponse(command)) {
                     //TODO add file bytes request functionality here
                     commandProcessor.handleResponse(receivedMsg);
-                }
-                else {
+                } else {
                     throw new BadMessageException("Unknown or illegal command " + command);
                 }
             }
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             log.severe("Communication to " + clientSocket.getInetAddress() + " failed, IO thread exiting");
-        }
-        catch (BadMessageException e) {
+        } catch (BadMessageException e) {
             terminateConnection(e.getMessage());
         }
     }
@@ -145,7 +148,7 @@ public class Connection extends Thread {
         remoteHostPort = new HostPort((Document)reply.get("hostPort"));
     }
 
-    public void sendCreateFile(FileSystemEvent fileSystemEvent) throws IOException{
+    public void sendCreateFile(FileSystemEvent fileSystemEvent) throws IOException {
         Document doc = new Document();
         doc.append("command", Commands.FILE_CREATE_REQUEST);
         doc.append("fileDescriptor", fileSystemEvent.fileDescriptor.toDoc());
@@ -153,17 +156,36 @@ public class Connection extends Thread {
         sendMessageToPeer(doc);
     }
 
-    private void receiveHandshake() throws IOException, BadMessageException {
+    private boolean receiveHandshake() throws IOException, BadMessageException {
         Document request = receiveMessageFromPeer();
         if (!request.get("command").equals(Commands.HANDSHAKE_REQUEST)) {
             throw new BadMessageException("Peer did not open with handshake request");
         }
-        remoteHostPort = new HostPort((Document)request.get("hostPort"));
-
+        remoteHostPort = new HostPort((Document) request.get("hostPort"));
+        if (server.countIncomingConnections() >=
+                Integer.parseInt(Configuration.getConfigurationValue("maximumIncommingConnections"))) {
+            refuseConnection();
+            return false;
+        }
         Document reply = new Document();
         reply.append("command", Commands.HANDSHAKE_RESPONSE);
         reply.append("hostPort", Configuration.getLocalHostPort());
         sendMessageToPeer(reply);
+        return true;
+    }
+
+    private void refuseConnection() {
+        log.severe("Refusing connection from " + clientSocket.getInetAddress());
+        Document msg = new Document();
+        msg.append("command", Commands.CONNECTION_REFUSED);
+        msg.append("message", "Connection limit reached, go away");
+        msg.append("peers", server.getPeerHostPorts());
+        try {
+            sendMessageToPeer(msg);
+            clientSocket.close();
+        } catch (IOException e) {
+            // Don't care about it - we're closing the connection anyway
+        }
     }
 
     private void terminateConnection(String errorMessage) {

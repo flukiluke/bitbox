@@ -1,9 +1,9 @@
 package unimelb.bitbox;
 
-import java.util.ArrayList;
-
 public class Commands {
     public final static String INVALID_PROTOCOL = "INVALID_PROTOCOL";
+    public final static String CONNECTION_REFUSED = "CONNECTION_REFUSED";
+
     public final static String HANDSHAKE_REQUEST = "HANDSHAKE_REQUEST";
     public final static String HANDSHAKE_RESPONSE = "HANDSHAKE_RESPONSE";
 
