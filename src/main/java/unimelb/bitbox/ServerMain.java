@@ -19,6 +19,7 @@ public class ServerMain implements FileSystemObserver {
 
     public ServerMain(List<Connection> connections) throws NumberFormatException, NoSuchAlgorithmException, IOException {
 		this.connections = connections;
+		fileSystemManager = new FileSystemManager(Configuration.getConfigurationValue("path"), this);
 		for (Connection connection : connections) {
             connection.setFileSystemManager(fileSystemManager);
         }
@@ -27,8 +28,10 @@ public class ServerMain implements FileSystemObserver {
 
     @Override
     public void processFileSystemEvent(FileSystemEvent fileSystemEvent){
+        log.info("file system event!");
         switch (fileSystemEvent.event) {
             case FILE_CREATE:
+                log.info("file creation event!");
                 for (Connection connection: connections) {
                     try {
                         connection.sendCreateFile(fileSystemEvent);

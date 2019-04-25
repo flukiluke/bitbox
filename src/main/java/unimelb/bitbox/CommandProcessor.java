@@ -27,32 +27,33 @@ public class CommandProcessor {
                 Boolean success = false;
 
                 command = Commands.INVALID_PROTOCOL;
+
                 if (!msg.containsKey("command")) {
                     message = missingField("command");
                 } else if (!msg.containsKey("fileDescriptor")) {
                     message = missingField("fileDescriptor");
-                } else if (!msg.containsKey("md5")) {
-                    message = missingField("md5");
-                } else if (!msg.containsKey("fileDescriptor")) {
-                    message = missingField("fileDescriptor");
-                } else if (!msg.containsKey("lastModified")) {
-                    message = missingField("lastModified");
-                } else if (!msg.containsKey("fileSize")) {
-                    message = missingField("fileSize");
                 } else {
                     //TODO add test to make sure lastModified and fileSize can be parsed as longs
                     command = Commands.FILE_CREATE_RESPONSE;
                     if (!fileSystemManager.isSafePathName(msg.getString("pathName"))) {
                         message = "unsafe pathname";
-                    } else if (!fileSystemManager.fileNameExists(msg.getString("pathName"))) {
+                    } else if (fileSystemManager.fileNameExists(msg.getString("pathName"))) {
                         message = "pathname already exists";
                     }
                     // try to create file loader
                     else {
                         boolean loaderCreated;
+
+                        Document fileDescriptor = (Document) msg.get("fileDescriptor");
+
+                        long fileSize = safeGetLong(fileDescriptor, "fileSize");
+                        long lastModified = safeGetLong(fileDescriptor, "lastModified");
+
                         try {
-                            loaderCreated = fileSystemManager.createFileLoader(msg.getString("pathName"), msg.getString("md5"),
-                                    msg.getLong("fileSize"), msg.getLong("lastModified"));
+                            String pathName = msg.getString("pathName");
+                            String md5 = fileDescriptor.getString("md5");
+
+                            loaderCreated = fileSystemManager.createFileLoader(pathName, md5, fileSize, lastModified);
                         } catch (NoSuchAlgorithmException e) {
                             loaderCreated = false;
                         } catch (IOException e) {
@@ -66,7 +67,7 @@ public class CommandProcessor {
                             // create a FILE_BYTES_REQUEST
 
 
-                            Document newMsg = newFileBytesRequest(Document.parse(msg.getString("fileDescriptor")),
+                            Document newMsg = newFileBytesRequest(((Document) msg.get("fileDescriptor")),
                                     msg.getString("pathName"),0);
                             replyMsgs.add(newMsg);
 
@@ -80,11 +81,11 @@ public class CommandProcessor {
                 }
                 Document newReplyMsg = new Document();
                 newReplyMsg.append("command", command);
+                newReplyMsg.append("message", message);
                 if (command.equals(Commands.FILE_CREATE_RESPONSE)) {
                     newReplyMsg.append("fileDescriptor",
-                            Document.parse(msg.getString("fileDescriptor")));
+                            (Document) msg.get("fileDescriptor"));
                     newReplyMsg.append("pathName", msg.getString("pathName"));
-                    newReplyMsg.append("message", message);
                     newReplyMsg.append("status", success.toString());
                 }
                 replyMsgs.add(0, newReplyMsg);
@@ -102,27 +103,29 @@ public class CommandProcessor {
 
                 Document newReplyMsg = new Document();
 
-                //TODO check if longs are casting as longs
-
-                if (!msg.containsKey("md5")) {
-                    message = missingField("md5");
-                } else if (!msg.containsKey("position")) {
+                if (!msg.containsKey("position")) {
                     message = missingField("position");
                 } else if (!msg.containsKey("length")) {
                     message = missingField("length");
                 } else {
-                    String md5 = msg.getString("md5");
-                    long position = msg.getLong("position");
-                    long length = msg.getLong("length");
+
+                    Document fileDescriptor = (Document) msg.get("fileDescriptor");
+                    String md5 = fileDescriptor.getString("md5");
+
+                    long position = safeGetLong(msg, "position");
+                    long length = safeGetLong(msg, "length");
+
 
                     ByteBuffer contentBB;
                     try {
+                        //TODO readFile is currently returning null array instead of the file, results in unsuccessful read
                         contentBB = fileSystemManager.readFile(md5, position, length);
                     } catch (IOException e) {
                         contentBB = null;
                     } catch (NoSuchAlgorithmException e) {
                         contentBB = null;
                     }
+                    System.out.println(contentBB);
 
                     if (contentBB != null) {
                         byte[] contentBytes = contentBB.array();
@@ -138,12 +141,15 @@ public class CommandProcessor {
                 }
 
 
+                long position = safeGetLong(msg, "position");
+                long length = safeGetLong(msg, "length");
+
                 newReplyMsg.append("command", Commands.FILE_BYTES_RESPONSE);
                 newReplyMsg.append("fileDescriptor",
-                        Document.parse(msg.getString("fileDescriptor")));
+                        (Document) msg.get("fileDescriptor"));
                 newReplyMsg.append("pathName", msg.getString("pathName"));
-                newReplyMsg.append("position", msg.getLong("position"));
-                newReplyMsg.append("length", msg.getLong("length"));
+                newReplyMsg.append("position", position);
+                newReplyMsg.append("length", length);
 
                 if (content != null) {
                     newReplyMsg.append("content", content);
@@ -182,17 +188,16 @@ public class CommandProcessor {
                     message = missingField("content");
                 } else if (!msg.containsKey("position")) {
                     message = missingField("position");
-                } else if (!msg.containsKey("fileSize")) {
-                    message = missingField("fileSize");
-                }  else if (!msg.containsKey("length")) {
+                } else if (!msg.containsKey("length")) {
                     message = missingField("length");
                 }  else {
 
                     String pathName = msg.getString("pathName");
                     String content = msg.getString("content");
-                    long position = msg.getLong("position");
-                    long fileSize = msg.getLong("fileSize");
-                    long length = msg.getLong("length");
+                    long position = safeGetLong(msg, "position");
+                    Document fileDescriptor = (Document) msg.get("fileDescriptor");
+                    long fileSize = safeGetLong(fileDescriptor, "fileSize");
+                    long length = safeGetLong(msg, "length");
 
                     //TODO make sure that length < blockSize
 
@@ -207,7 +212,7 @@ public class CommandProcessor {
                                 if (position < fileSize || !fileSystemManager.checkWriteComplete(pathName)) {
 
                                 } else {
-                                    Document newMsg = newFileBytesRequest(Document.parse(msg.getString("fileDescriptor")),
+                                    Document newMsg = newFileBytesRequest(fileDescriptor,
                                             msg.getString("pathName"),position + length);
                                     replyMsgs.add(newMsg);
                                 }
@@ -240,6 +245,22 @@ public class CommandProcessor {
         msg.append("length", Configuration.getConfigurationValue("blockSize"));
 
         return msg;
+    }
+
+    private long safeGetLong (Document doc, String key) {
+
+        long val;
+        try {
+            val = doc.getLong(key);
+        } catch (ClassCastException | NullPointerException e) {
+            try {
+                val = Long.parseLong(doc.getString(key));
+            } catch (NumberFormatException f) {
+                val = -1;
+            }
+        }
+        return val;
+
     }
 
 }
