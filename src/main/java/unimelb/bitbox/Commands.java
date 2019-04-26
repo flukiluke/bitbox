@@ -38,6 +38,8 @@ public class Commands {
     public final static String LENGTH = "length";
     public final static String CONTENT = "content";
 
+    //TODO need to check the fields are the appropriate type (string, long, boolean, etc.)
+
     public final static String[] fileReqFields = {
             COMMAND,
             FILE_DESCRIPTOR,
@@ -114,7 +116,7 @@ public class Commands {
         validFields.put(DIRECTORY_DELETE_REQUEST, dirReqFields);
         validFields.put(DIRECTORY_DELETE_RESPONSE, dirResFields);
         validFields.put(FILE_BYTES_REQUEST, bytesReqFields);
-        validFields.put(FILE_BYTES_REQUEST, bytesResFields);
+        validFields.put(FILE_BYTES_RESPONSE, bytesResFields);
     }
 
     public static boolean isRequest(String command) {

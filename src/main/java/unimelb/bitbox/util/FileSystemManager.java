@@ -391,11 +391,19 @@ public class FileSystemManager extends Thread {
 	   * @throws NoSuchAlgorithmException if the MD5 hash algorithm is not available.
 	   */
 	public boolean createFileLoader(String pathName, String md5, long length, long lastModified) throws NoSuchAlgorithmException, IOException {
+		System.out.println(pathName);
 		pathName=separatorsToSystem(pathName);
+		System.out.println(pathName);
 		synchronized(this) {
 			String fullPathName=root+FileSystems.getDefault().getSeparator()+pathName;
-			if(watchedFiles.containsKey(fullPathName)) return false;
-			if(loadingFiles.containsKey(fullPathName)) return false;
+			if(watchedFiles.containsKey(fullPathName)) {
+				System.out.println("111");
+				return false;
+			}
+			if(loadingFiles.containsKey(fullPathName)) {
+				System.out.println("222");
+				return false;
+			}
 			loadingFiles.put(fullPathName, new FileLoader(fullPathName,md5,length,lastModified));
 		}
 		return true;

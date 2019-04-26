@@ -26,12 +26,20 @@ public class CommandProcessor {
         String msgInCommand = msgIn.getString(Commands.COMMAND); // request received
         String msgOutCommand = Commands.INVALID_PROTOCOL; // default response
 
-        // other common field names
-        String pathName, md5;
-        Document fileDescriptor = new Document();
-        Long fileSize;
-        Long lastModified;
-        Boolean success;
+        // no further handling needed
+        if (msgInCommand.equals(Commands.INVALID_PROTOCOL)) return msgOut;
+
+        // field names
+        String pathName, md5, content;
+        Document fileDescriptor;
+        long fileSize, lastModified, position, length;
+        boolean status;
+
+        // used for byte requests
+        byte[] contentBytes;
+        ByteBuffer contentBB;
+
+        boolean success;
 
         String message = checkFieldsComplete(msgInCommand, msgIn); // message field
 
@@ -46,9 +54,9 @@ public class CommandProcessor {
 
         msgOutCommand = msgIn.getString(Commands.COMMAND);
         switch (msgInCommand) {
+
             case Commands.FILE_CREATE_REQUEST:
                 msgOutCommand = Commands.FILE_CREATE_RESPONSE;
-                success = false;
                 fileDescriptor = (Document) msgIn.get(Commands.FILE_DESCRIPTOR);
                 pathName = msgIn.getString(Commands.PATH_NAME);
 
@@ -61,6 +69,7 @@ public class CommandProcessor {
 
                     // try to create file loader
                     boolean loaderCreated;
+                    System.out.println("000");
 
                     md5 = fileDescriptor.getString("md5");
                     fileSize = safeGetLong(fileDescriptor, "fileSize");
@@ -68,22 +77,26 @@ public class CommandProcessor {
 
                     try {
                         loaderCreated = fileSystemManager.createFileLoader(pathName, md5, fileSize, lastModified);
+
+                        if (loaderCreated) {
+                            success = true;
+                            message = "file loader ready";
+
+                            // create a FILE_BYTES_REQUEST
+                            newMsg = newFileBytesRequest(fileDescriptor, pathName, 0, fileSize);
+                            msgOut.add(newMsg);
+                        } else {
+                            success = false;
+                            message = "file loader creation unsuccessful";
+                        }
                     } catch (NoSuchAlgorithmException e) {
-                        loaderCreated = false;
+                        success = false;
+                        message = "file loader creation unsuccessful: MD5 algorithm not available";
                     } catch (IOException e) {
-                        loaderCreated = false;
+                        success = false;
+                        message = "file loader creation unsuccessful: file system exception";
                     }
 
-                    if (loaderCreated) {
-                        message = "file loader ready";
-                        success = true;
-
-                        // create a FILE_BYTES_REQUEST
-                        newMsg = newFileBytesRequest(fileDescriptor, pathName, 0);
-                        msgOut.add(newMsg);
-                    } else {
-                        message = "file loader not ready";
-                    }
 
                     // create FILE_CREATE_RESPONSE
                     newMsg = file_related_reply(msgOutCommand, fileDescriptor, pathName, success, message);
@@ -186,25 +199,21 @@ public class CommandProcessor {
                 break;
 
 
-            //RESPONSES
-
             case Commands.FILE_BYTES_RESPONSE:
 
-                String content;
-                long position, length;
+                status = msgIn.getBoolean("status");
+                if (status == false) break;
 
+                fileDescriptor = (Document) msgIn.get("fileDescriptor");
                 pathName = msgIn.getString("pathName");
                 content = msgIn.getString("content");
                 position = safeGetLong(msgIn, "position");
-                fileDescriptor = (Document) msgIn.get("fileDescriptor");
-                fileSize = safeGetLong(fileDescriptor, "fileSize");
                 length = safeGetLong(msgIn, "length");
+                fileSize = safeGetLong(fileDescriptor, "fileSize");
 
-
-                //TODO make sure that length < blockSize
-
-                byte[] contentBytes = Base64.getDecoder().decode(content);
-                ByteBuffer contentBB = null;
+                contentBytes = Base64.getDecoder().decode(content);
+                // TODO handle exception if we the peer gives us the wrong length! or calculate our own length?
+                contentBB = ByteBuffer.allocate((int) length);
                 contentBB.put(contentBytes);
 
                 try {
@@ -212,27 +221,68 @@ public class CommandProcessor {
 
                         try {
                             if (position < fileSize || !fileSystemManager.checkWriteComplete(pathName)) {
-
-                            } else {
                                 long newPosition = position + length;
-                                newMsg = newFileBytesRequest(fileDescriptor, pathName, newPosition);
+                                newMsg = newFileBytesRequest(fileDescriptor, pathName, newPosition, fileSize);
                                 msgOut.add(newMsg);
                             }
                         } catch (NoSuchAlgorithmException e) {
+                            //TODO need to handle
                             e.printStackTrace();
                         } catch (IOException e) {
+                            //TODO need to handle
                             e.printStackTrace();
                         }
 
                     }
                 } catch (IOException e) {
-                    //TODO output message for this error
+                    //TODO need to handle
                     e.printStackTrace();
                 }
 
+
+
+            case Commands.FILE_BYTES_REQUEST:
+
+                fileDescriptor = (Document) msgIn.get("fileDescriptor");
+                md5 = fileDescriptor.getString("md5");
+                position = safeGetLong(msgIn, "position");
+                length = safeGetLong(msgIn, "length");
+
+                pathName = msgIn.getString("pathName");
+
+                //TODO do we need to reject requests if the length < blockSize? doesn't say so in the spec.
+
+                try {
+                    contentBB = fileSystemManager.readFile(md5, position, length);
+
+                    if (contentBB != null) {
+                        contentBytes = contentBB.array();
+                        content = Base64.getEncoder().encodeToString(contentBytes);
+                        message = "successful read";
+                        status = true;
+                    } else {
+                        content = "";
+                        message = "unsuccessful read";
+                        status = false;
+                    }
+                } catch (IOException e) {
+                    content = "";
+                    status = false;
+                    message = "file loader creation unsuccessful: file system exception";
+                } catch (NoSuchAlgorithmException e) {
+                    content = "";
+                    status = false;
+                    message = "file loader creation unsuccessful: MD5 algorithm not available";
+                }
+
+                //TODO update length to reflect actual size of returned content
+                newMsg = newFileBytesResponse(fileDescriptor, pathName, position, length, content, message, status);
+                msgOut.add(newMsg);
                 break;
 
         }
+
+
         return msgOut;
     }
 
@@ -283,6 +333,7 @@ public class CommandProcessor {
      * @return
      */
     private String checkFieldsComplete(String command, Document msg) {
+        System.out.println(command);
         for (String field: (String[]) Commands.validFields.get(command)) {
             if (!msg.containsKey(field)) {
                 return missingField(field);
@@ -297,21 +348,44 @@ public class CommandProcessor {
      * @return the error message
      */
     private String missingField(String field) {
-        return "message must contain a " + field + " field as string";
+        return "message is missing required field: " + field;
     }
 
 
 
-    private Document newFileBytesRequest (Document fileDescriptor, String pathName, long position) {
+    private Document newFileBytesRequest (Document fileDescriptor, String pathName, long position, long fileSize) {
         Document msg = new Document();
-        msg.append("command", Commands.FILE_BYTES_REQUEST);
-        msg.append("fileDescriptor", fileDescriptor);
-        msg.append("pathName", pathName);
-        msg.append("position", position);
-        msg.append("length", Configuration.getConfigurationValue("blockSize"));
+
+        // calculate length to request
+        long length = Long.parseLong(Configuration.getConfigurationValue("blockSize"));
+        long remaining = fileSize - position;
+        if (remaining < length) length = remaining;
+
+        msg.append(Commands.COMMAND, Commands.FILE_BYTES_REQUEST);
+        msg.append(Commands.FILE_DESCRIPTOR, fileDescriptor);
+        msg.append(Commands.PATH_NAME, pathName);
+        msg.append(Commands.POSITION, position);
+        msg.append(Commands.LENGTH, length);
+
         return msg;
     }
 
+    private Document newFileBytesResponse (Document fileDescriptor, String pathName, long position, long length,
+                                           String content, String message, boolean status) {
+        Document msg = new Document();
+        msg.append(Commands.COMMAND, Commands.FILE_BYTES_RESPONSE);
+        msg.append(Commands.FILE_DESCRIPTOR, fileDescriptor);
+        msg.append(Commands.PATH_NAME, pathName);
+        msg.append(Commands.POSITION, position);
+        msg.append(Commands.LENGTH, length);
+        msg.append(Commands.CONTENT, content);
+        msg.append(Commands.MESSAGE, message);
+        msg.append(Commands.STATUS, status);
+        return msg;
+    }
+
+
+    //TODO can remove if we implement a check in Commands.java that message fields are in correct type
     private long safeGetLong (Document doc, String key) {
 
         long val;

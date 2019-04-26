@@ -170,7 +170,7 @@ public class Connection extends Thread {
         // write request message
         doc.append(Commands.COMMAND, command);
         doc.append(Commands.FILE_DESCRIPTOR, fileSystemEvent.fileDescriptor.toDoc());
-        doc.append(Commands.PATH_NAME, fileSystemEvent.path);
+        doc.append(Commands.PATH_NAME, fileSystemEvent.pathName);
         sendMessageToPeer(doc);
     }
 
