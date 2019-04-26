@@ -98,18 +98,16 @@ public class Connection extends Thread {
     public void run() {
         try {
             while (true) {
-                ArrayList<Document> replyMsgs = new ArrayList<Document>();
-                Document receivedMsg = receiveMessageFromPeer();
-                String command = receivedMsg.getString(Commands.COMMAND);
-                if (Commands.isRequest(command)) {
-                    replyMsgs = commandProcessor.handleRequest(receivedMsg);
-                    for (Document msg : replyMsgs) {
+                ArrayList<Document> msgOut;
+                Document msgIn = receiveMessageFromPeer();
+
+                //TODO if statement no longer necessary; remove
+                String command = msgIn.getString(Commands.COMMAND);
+                if (Commands.isRequest(command) || Commands.isResponse(command)) {
+                    msgOut = commandProcessor.handleMessage(msgIn);
+                    for (Document msg : msgOut) {
                         sendMessageToPeer(msg);
                     }
-                }
-                else if (Commands.isResponse(command)) {
-                    //TODO add file bytes request functionality here
-                    commandProcessor.handleResponse(receivedMsg);
                 } else {
                     throw new BadMessageException("Unknown or illegal command " + command);
                 }

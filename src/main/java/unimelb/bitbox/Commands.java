@@ -26,6 +26,7 @@ public class Commands {
 
     // list of fields
     public final static String COMMAND = "command";
+    // TODO need to implement checks for particular fields needed within FILE_DESCRIPTOR.
     public final static String FILE_DESCRIPTOR = "fileDescriptor";
     public final static String MD5 = "md5";
     public final static String LAST_MODIFIED = "lastModified";
@@ -33,6 +34,9 @@ public class Commands {
     public final static String PATH_NAME = "pathName";
     public final static String MESSAGE = "message";
     public final static String STATUS = "status";
+    public final static String POSITION = "position";
+    public final static String LENGTH = "length";
+    public final static String CONTENT = "content";
 
     public final static String[] fileReqFields = {
             COMMAND,
@@ -56,6 +60,25 @@ public class Commands {
     public final static String[] dirResFields = {
             COMMAND,
             PATH_NAME,
+            MESSAGE,
+            STATUS
+    };
+
+    public final static String[] bytesReqFields = {
+            COMMAND,
+            FILE_DESCRIPTOR,
+            PATH_NAME,
+            POSITION,
+            LENGTH
+    };
+
+    public final static String[] bytesResFields = {
+            COMMAND,
+            FILE_DESCRIPTOR,
+            PATH_NAME,
+            POSITION,
+            LENGTH,
+            CONTENT,
             MESSAGE,
             STATUS
     };
@@ -90,6 +113,8 @@ public class Commands {
         validFields.put(DIRECTORY_CREATE_RESPONSE, dirResFields);
         validFields.put(DIRECTORY_DELETE_REQUEST, dirReqFields);
         validFields.put(DIRECTORY_DELETE_RESPONSE, dirResFields);
+        validFields.put(FILE_BYTES_REQUEST, bytesReqFields);
+        validFields.put(FILE_BYTES_REQUEST, bytesResFields);
     }
 
     public static boolean isRequest(String command) {
