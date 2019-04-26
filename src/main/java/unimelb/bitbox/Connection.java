@@ -153,12 +153,6 @@ public class Connection extends Thread {
         return true;
     }
 
-    public void sendCreateFile(FileSystemEvent fileSystemEvent) throws IOException {
-    /**
-     * Sends a request involving file
-     * @param fileSystemEvent the file event that occurred
-     * @throws IOException if an I/O error occurs
-     */
     public void sendFileReq(FileSystemEvent fileSystemEvent) throws IOException{
         Document doc = new Document();
         String command;
