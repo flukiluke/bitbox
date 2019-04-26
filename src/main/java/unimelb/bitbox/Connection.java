@@ -51,7 +51,7 @@ public class Connection extends Thread {
             log.severe("Socket creation failed, IO thread exiting");
             return;
         }
-        initialise();
+        initialise(true);
     }
 
     /**
@@ -66,11 +66,11 @@ public class Connection extends Thread {
         this.fileSystemManager = fileSystemManager;
         this.clientSocket = clientSocket;
         this.commandProcessor = new CommandProcessor(fileSystemManager);
-        initialise();
+        initialise(false);
     }
 
-    private void initialise() {
-        boolean success = true;
+    private void initialise(boolean initiator) {
+        boolean success;
         try {
             outStream = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream(), "UTF-8"));
             inStream = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
@@ -100,9 +100,9 @@ public class Connection extends Thread {
             while (true) {
                 Document replyMsg;
                 Document receivedMsg = receiveMessageFromPeer();
-                String command = receivedMsg.getString("command");
+                String command = receivedMsg.getString(Commands.COMMAND);
                 if (Commands.isRequest(command)) {
-                    replyMsg = commandProcessor.handleRequest(receivedMsg);
+                    replyMsg = this.commandProcessor.handleRequest(receivedMsg);
                     sendMessageToPeer(replyMsg);
                 } else if (Commands.isResponse(command)) {
                     //TODO add file bytes request functionality here
@@ -138,7 +138,7 @@ public class Connection extends Thread {
 
     private boolean sendHandshake() throws IOException, BadMessageException {
         Document doc = new Document();
-        doc.append("command", Commands.HANDSHAKE_REQUEST);
+        doc.append(Commands.COMMAND, Commands.HANDSHAKE_REQUEST);
         doc.append("hostPort", Configuration.getLocalHostPort());
         sendMessageToPeer(doc);
 
@@ -146,25 +146,64 @@ public class Connection extends Thread {
         if (reply.get("command").equals(Commands.CONNECTION_REFUSED)) {
             Peer.discoveredPeers((ArrayList)reply.get("peers"));
             return false;
-        }
-        if (!reply.get("command").equals(Commands.HANDSHAKE_RESPONSE)) {
-            throw new BadMessageException("Peer did not respond with handshake response, responded with " + reply.getString("command"));
+        } else if (!reply.get("command").equals(Commands.HANDSHAKE_RESPONSE)) {
+            throw new BadMessageException("Peer did not respond with handshake response, responded with " +  reply.getString(Commands.COMMAND));
         }
         remoteHostPort = new HostPort((Document)reply.get("hostPort"));
         return true;
     }
 
     public void sendCreateFile(FileSystemEvent fileSystemEvent) throws IOException {
+    /**
+     * Sends a request involving file
+     * @param fileSystemEvent the file event that occurred
+     * @throws IOException if an I/O error occurs
+     */
+    public void sendFileReq(FileSystemEvent fileSystemEvent) throws IOException{
         Document doc = new Document();
-        doc.append("command", Commands.FILE_CREATE_REQUEST);
-        doc.append("fileDescriptor", fileSystemEvent.fileDescriptor.toDoc());
-        doc.append("pathName", fileSystemEvent.path);
+        String command;
+
+        // determine correct request
+        if (fileSystemEvent.event == FileSystemManager.EVENT.FILE_CREATE) {
+            command = Commands.FILE_CREATE_REQUEST;
+        } else if (fileSystemEvent.event == FileSystemManager.EVENT.FILE_DELETE) {
+            command = Commands.FILE_DELETE_REQUEST;
+        } else {
+            command = Commands.FILE_MODIFY_REQUEST;
+        }
+
+        // write request message
+        doc.append(Commands.COMMAND, command);
+        doc.append(Commands.FILE_DESCRIPTOR, fileSystemEvent.fileDescriptor.toDoc());
+        doc.append(Commands.PATH_NAME, fileSystemEvent.path);
+        sendMessageToPeer(doc);
+    }
+
+    /**
+     * Sends a request involving directory
+     * @param fileSystemEvent the directory event that occurred
+     * @throws IOException if an I/O error occurs
+     */
+    public void sendDirReq(FileSystemEvent fileSystemEvent) throws IOException{
+        Document doc = new Document();
+        String command;
+
+        // determine correct request
+        if (fileSystemEvent.event == FileSystemManager.EVENT.DIRECTORY_CREATE) {
+            command = Commands.DIRECTORY_CREATE_REQUEST;
+        } else {
+            command = Commands.DIRECTORY_DELETE_REQUEST;
+        }
+
+        // write request message
+        doc.append(Commands.COMMAND, command);
+        doc.append(Commands.PATH_NAME, fileSystemEvent.path);
         sendMessageToPeer(doc);
     }
 
     private boolean receiveHandshake() throws IOException, BadMessageException {
         Document request = receiveMessageFromPeer();
-        if (!request.get("command").equals(Commands.HANDSHAKE_REQUEST)) {
+        if (!request.get(Commands.COMMAND).equals(Commands.HANDSHAKE_REQUEST)) {
             throw new BadMessageException("Peer did not open with handshake request");
         }
         remoteHostPort = new HostPort((Document) request.get("hostPort"));
@@ -174,7 +213,7 @@ public class Connection extends Thread {
             return false;
         }
         Document reply = new Document();
-        reply.append("command", Commands.HANDSHAKE_RESPONSE);
+        reply.append(Commands.COMMAND, Commands.HANDSHAKE_RESPONSE);
         reply.append("hostPort", Configuration.getLocalHostPort());
         sendMessageToPeer(reply);
         return true;
@@ -197,7 +236,7 @@ public class Connection extends Thread {
     private void terminateConnection(String errorMessage) {
         log.severe("Peer sent invalid message, terminating connection with prejudice");
         Document doc = new Document();
-        doc.append("command", Commands.INVALID_PROTOCOL);
+        doc.append(Commands.COMMAND, Commands.INVALID_PROTOCOL);
         doc.append("message", errorMessage);
         try {
             sendMessageToPeer(doc);
