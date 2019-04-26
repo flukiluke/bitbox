@@ -98,13 +98,16 @@ public class Connection extends Thread {
     public void run() {
         try {
             while (true) {
-                Document replyMsg;
+                ArrayList<Document> replyMsgs = new ArrayList<Document>();
                 Document receivedMsg = receiveMessageFromPeer();
                 String command = receivedMsg.getString(Commands.COMMAND);
                 if (Commands.isRequest(command)) {
-                    replyMsg = this.commandProcessor.handleRequest(receivedMsg);
-                    sendMessageToPeer(replyMsg);
-                } else if (Commands.isResponse(command)) {
+                    replyMsgs = commandProcessor.handleRequest(receivedMsg);
+                    for (Document msg : replyMsgs) {
+                        sendMessageToPeer(msg);
+                    }
+                }
+                else if (Commands.isResponse(command)) {
                     //TODO add file bytes request functionality here
                     commandProcessor.handleResponse(receivedMsg);
                 } else {
@@ -244,5 +247,10 @@ public class Connection extends Thread {
         public BadMessageException(String message) {
             super(message);
         }
+    }
+
+    public void setFileSystemManager (FileSystemManager fileSystemManager) {
+        this.fileSystemManager = fileSystemManager;
+        this.commandProcessor = new CommandProcessor(fileSystemManager);
     }
 }

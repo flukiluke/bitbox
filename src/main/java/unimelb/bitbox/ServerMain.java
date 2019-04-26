@@ -9,7 +9,10 @@ import java.util.List;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-import unimelb.bitbox.util.*;
+import unimelb.bitbox.util.Configuration;
+import unimelb.bitbox.util.Document;
+import unimelb.bitbox.util.FileSystemManager;
+import unimelb.bitbox.util.FileSystemObserver;
 import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
 
 public class ServerMain implements FileSystemObserver {
@@ -19,7 +22,10 @@ public class ServerMain implements FileSystemObserver {
 
     public ServerMain(List<Connection> connections) throws NumberFormatException, NoSuchAlgorithmException, IOException {
 		this.connections = connections;
-		fileSystemManager=new FileSystemManager(Configuration.getConfigurationValue("path"),this);
+		fileSystemManager = new FileSystemManager(Configuration.getConfigurationValue("path"), this);
+		for (Connection connection : connections) {
+            connection.setFileSystemManager(fileSystemManager);
+        }
 		listenForNewConnections();
 	}
 
@@ -92,6 +98,7 @@ public class ServerMain implements FileSystemObserver {
             log.info("Waiting for peer connection");
             Socket clientSocket = serverSocket.accept();
             Connection connection = new Connection(this, clientSocket, fileSystemManager);
+            // TODO restrict the maximum number of connections
             connections.add(connection);
             reapConnections();
             showConnections();
