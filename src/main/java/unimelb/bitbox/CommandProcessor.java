@@ -93,12 +93,10 @@ public class CommandProcessor {
                         status = false;
                         message = "file loader creation unsuccessful: file system exception";
                     }
-
-
-                    // create FILE_CREATE_RESPONSE
-                    newMsg = file_related_reply(msgOutCommand, fileDescriptor, pathName, status, message);
-                    msgOut.add(0, newMsg);
                 }
+                // create FILE_CREATE_RESPONSE
+                newMsg = file_related_reply(msgOutCommand, fileDescriptor, pathName, status, message);
+                msgOut.add(0, newMsg);
                 break;
 
             case Commands.FILE_DELETE_REQUEST:
