@@ -33,13 +33,11 @@ public class CommandProcessor {
         String pathName, md5, content;
         Document fileDescriptor;
         long fileSize, lastModified, position, length;
-        boolean status;
+        Boolean status;
 
         // used for byte requests
         byte[] contentBytes;
         ByteBuffer contentBB;
-
-        boolean success;
 
         String message = checkFieldsComplete(msgInCommand, msgIn); // message field
 
@@ -78,27 +76,27 @@ public class CommandProcessor {
                         loaderCreated = fileSystemManager.createFileLoader(pathName, md5, fileSize, lastModified);
 
                         if (loaderCreated) {
-                            success = true;
+                            status = true;
                             message = "file loader ready";
 
                             // create a FILE_BYTES_REQUEST
                             newMsg = newFileBytesRequest(fileDescriptor, pathName, 0, fileSize);
                             msgOut.add(newMsg);
                         } else {
-                            success = false;
+                            status = false;
                             message = "file loader creation unsuccessful";
                         }
                     } catch (NoSuchAlgorithmException e) {
-                        success = false;
+                        status = false;
                         message = "file loader creation unsuccessful: MD5 algorithm not available";
                     } catch (IOException e) {
-                        success = false;
+                        status = false;
                         message = "file loader creation unsuccessful: file system exception";
                     }
 
 
                     // create FILE_CREATE_RESPONSE
-                    newMsg = file_related_reply(msgOutCommand, fileDescriptor, pathName, success, message);
+                    newMsg = file_related_reply(msgOutCommand, fileDescriptor, pathName, status, message);
                     msgOut.add(0, newMsg);
                 }
                 break;
@@ -107,7 +105,7 @@ public class CommandProcessor {
                 msgOutCommand = Commands.FILE_DELETE_RESPONSE;
                 fileDescriptor = (Document) msgIn.get(Commands.FILE_DESCRIPTOR);
                 pathName = msgIn.getString(Commands.PATH_NAME);
-                success = false;
+                status = false;
 
                 // check the file can be deleted
                 if (!fileSystemManager.isSafePathName(msgIn.getString("pathName"))) {
@@ -118,15 +116,15 @@ public class CommandProcessor {
                     lastModified = fileDescriptor.getLong(Commands.LAST_MODIFIED);
                     md5 = fileDescriptor.getString(Commands.MD5);
 
-                    success = fileSystemManager.deleteFile(pathName, lastModified, md5);
-                    if (success) {
+                    status = fileSystemManager.deleteFile(pathName, lastModified, md5);
+                    if (status) {
                         message = "file deleted";
                         msgOutCommand = Commands.FILE_DELETE_RESPONSE;
                     } else {
                         message = "there was a problem deleting the file";
                     }
                 }
-                newMsg = file_related_reply(msgOutCommand, fileDescriptor, pathName, success, message);
+                newMsg = file_related_reply(msgOutCommand, fileDescriptor, pathName, status, message);
                 msgOut.add(newMsg);
                 break;
 
@@ -135,7 +133,7 @@ public class CommandProcessor {
                 msgOutCommand = Commands.FILE_MODIFY_RESPONSE;
                 fileDescriptor = (Document) msgIn.get(Commands.FILE_DESCRIPTOR);
                 pathName = msgIn.getString(Commands.PATH_NAME);
-                success = false;
+                status = false;
 
                 // check that the file can be modified
                 if (!fileSystemManager.isSafePathName(msgIn.getString("pathName"))) {
@@ -154,61 +152,61 @@ public class CommandProcessor {
                         loaderCreated = fileSystemManager.modifyFileLoader(pathName, md5, lastModified);
 
                         if (loaderCreated) {
-                            success = true;
+                            status = true;
                             message = "file loader ready";
 
                             // create a FILE_BYTES_REQUEST
                             newMsg = newFileBytesRequest(fileDescriptor, pathName, 0, fileSize);
                             msgOut.add(newMsg);
                         } else {
-                            success = false;
+                            status = false;
                             message = "file loader creation unsuccessful";
                         }
                     } catch (IOException e) {
-                        success = false;
+                        status = false;
                         message = "file loader creation unsuccessful: file system exception";
                     }
 
                 }
-                newMsg = file_related_reply(msgOutCommand, fileDescriptor, pathName, success, message);
+                newMsg = file_related_reply(msgOutCommand, fileDescriptor, pathName, status, message);
                 msgOut.add(newMsg);
                 break;
 
             case Commands.DIRECTORY_CREATE_REQUEST:
                 pathName = msgIn.getString(Commands.PATH_NAME);
-                success = false;
+                status = false;
 
                 if (fileSystemManager.isSafePathName(pathName)) {
                     message = "unsafe pathname given";
                 } else if (fileSystemManager.dirNameExists(pathName)) {
                     message = "pathname already exists";
                 } else {
-                    success = fileSystemManager.makeDirectory(pathName);
+                    status = fileSystemManager.makeDirectory(pathName);
                     message = "directory created";
-                    if (!success) {
+                    if (!status) {
                         message = "there was a problem creating the directory";
                     }
                 }
-                newMsg = dir_related_reply(msgOutCommand, pathName, message, success);
+                newMsg = dir_related_reply(msgOutCommand, pathName, message, status);
                 msgOut.add(newMsg);
                 break;
 
             case Commands.DIRECTORY_DELETE_REQUEST:
                 pathName = msgIn.getString(Commands.PATH_NAME);
-                success = false;
+                status = false;
 
                 if (fileSystemManager.isSafePathName(pathName)) {
                     message = "unsafe pathname given";
                 } else if (!fileSystemManager.dirNameExists(pathName)) {
                     message = "pathname does not exist";
                 } else {
-                    success = fileSystemManager.deleteDirectory(pathName);
+                    status = fileSystemManager.deleteDirectory(pathName);
                     message = "directory deleted";
-                    if (!success) {
+                    if (!status) {
                         message = "there was a problem deleting the directory";
                     }
                 }
-                newMsg = dir_related_reply(msgOutCommand, pathName, message, success);
+                newMsg = dir_related_reply(msgOutCommand, pathName, message, status);
                 msgOut.add(newMsg);
                 break;
 
