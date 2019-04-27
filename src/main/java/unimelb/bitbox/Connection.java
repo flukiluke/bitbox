@@ -110,18 +110,14 @@ public class Connection extends Thread {
             terminateConnection(e.getMessage());
         }
     }
-
-
-    /** sendMessageToPeer and receiveMessageFromPeer are synchronized because multiple threads reading/writing
-     * to a socket at the same time with be Bad™
-     */
-    private synchronized void sendMessageToPeer(Document message) throws IOException {
+    
+    private void sendMessageToPeer(Document message) throws IOException {
         outStream.write(message.toJson() + "\n");
         outStream.flush();
         log.info("Sent message to peer: " + message);
     }
 
-    private synchronized Document receiveMessageFromPeer() throws BadMessageException, IOException {
+    private Document receiveMessageFromPeer() throws BadMessageException, IOException {
         String input = inStream.readLine();
         if (input == null) {
             throw new IOException();
