@@ -39,7 +39,7 @@ public class CommandProcessor {
         byte[] contentBytes;
         ByteBuffer contentBB;
 
-        boolean success;
+        Boolean success;
 
         String message = checkFieldsComplete(msgInCommand, msgIn); // message field
 
@@ -59,6 +59,7 @@ public class CommandProcessor {
                 msgOutCommand = Commands.FILE_CREATE_RESPONSE;
                 fileDescriptor = (Document) msgIn.get(Commands.FILE_DESCRIPTOR);
                 pathName = msgIn.getString(Commands.PATH_NAME);
+                success = false;
 
                 // check that the file can be created
                 if (!fileSystemManager.isSafePathName(pathName)) {
@@ -86,22 +87,17 @@ public class CommandProcessor {
                             newMsg = newFileBytesRequest(fileDescriptor, pathName, 0, fileSize);
                             msgOut.add(newMsg);
                         } else {
-                            success = false;
                             message = "file loader creation unsuccessful";
                         }
                     } catch (NoSuchAlgorithmException e) {
-                        success = false;
                         message = "file loader creation unsuccessful: MD5 algorithm not available";
                     } catch (IOException e) {
-                        success = false;
                         message = "file loader creation unsuccessful: file system exception";
                     }
-
-
-                    // create FILE_CREATE_RESPONSE
-                    newMsg = file_related_reply(msgOutCommand, fileDescriptor, pathName, success, message);
-                    msgOut.add(0, newMsg);
                 }
+                // create FILE_CREATE_RESPONSE
+                newMsg = file_related_reply(msgOutCommand, fileDescriptor, pathName, success, message);
+                msgOut.add(0, newMsg);
                 break;
 
             case Commands.FILE_DELETE_REQUEST:
@@ -281,8 +277,6 @@ public class CommandProcessor {
                 break;
 
         }
-
-
         return msgOut;
     }
 
