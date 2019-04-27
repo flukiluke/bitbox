@@ -9,267 +9,261 @@ import java.nio.ByteBuffer;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.logging.Logger;
 
 public class CommandProcessor {
     private FileSystemManager fileSystemManager;
+    private ArrayList<Document> responses;
+    private static Logger log = Logger.getLogger(ServerMain.class.getName());
+
 
     public CommandProcessor(FileSystemManager fileSystemManager) {
         this.fileSystemManager = fileSystemManager;
     }
 
-    public ArrayList<Document> handleMessage(Document msgIn) throws BadMessageException {
-        ArrayList<Document> msgOut = new ArrayList<>();
-        Document newMsg;
+    private void fileCreateRequest(Document msgIn) throws BadMessageException {
+        Document fileDescriptor = msgIn.getDocument(Commands.FILE_DESCRIPTOR);
+        String pathName = msgIn.getString(Commands.PATH_NAME);
+        String message = "";
 
-        String msgInCommand = msgIn.getString(Commands.COMMAND); // request received
-        String msgOutCommand;
+        // check that the file can be created
+        if (!fileSystemManager.isSafePathName(pathName)) {
+            message = "unsafe pathname given";
+        } else if (fileSystemManager.fileNameExists(pathName)) {
+            message = "pathname already exists";
+        } else {
+            // try to create file loader
+            String md5 = fileDescriptor.getString("md5");
+            long fileSize = fileDescriptor.getLong("fileSize");
+            long lastModified = fileDescriptor.getLong("lastModified");
+
+            try {
+                boolean status = fileSystemManager.createFileLoader(pathName, md5, fileSize, lastModified);
+                if (status) {
+                    fileRelatedReply(Commands.FILE_CREATE_RESPONSE, fileDescriptor, pathName,
+                            true, "file loader ready");
+                    requestBytes(fileDescriptor, pathName, 0, fileSize);
+                    return;
+                }
+                message = "file loader creation unsuccessful";
+            } catch (NoSuchAlgorithmException e) {
+                log.severe("Missing hashing algorithm: " + e.getLocalizedMessage());
+                System.exit(1);
+            } catch (IOException e) {
+                message = "file loader creation unsuccessful: file system exception";
+            }
+        }
+        fileRelatedReply(Commands.FILE_CREATE_RESPONSE, fileDescriptor, pathName,
+                false, message);
+    }
+
+    private void fileModifyRequest(Document msgIn) throws BadMessageException {
+        Document fileDescriptor = msgIn.getDocument(Commands.FILE_DESCRIPTOR);
+        String pathName = msgIn.getString(Commands.PATH_NAME);
+        String message = "";
+
+        // check that the file can be created
+        if (!fileSystemManager.isSafePathName(pathName)) {
+            message = "unsafe pathname given";
+        } else if (!fileSystemManager.fileNameExists(pathName)) {
+            message = "pathname does not exist";
+        } else {
+            // try to create file loader
+            String md5 = fileDescriptor.getString("md5");
+            long fileSize = fileDescriptor.getLong("fileSize");
+            long lastModified = fileDescriptor.getLong("lastModified");
+
+            try {
+                boolean status = fileSystemManager.modifyFileLoader(pathName, md5, lastModified);
+                if (status) {
+                    fileRelatedReply(Commands.FILE_MODIFY_RESPONSE, fileDescriptor, pathName,
+                            true, "file loader ready");
+                    requestBytes(fileDescriptor, pathName, 0, fileSize);
+                    return;
+                }
+                message = "file loader creation unsuccessful";
+            } catch (IOException e) {
+                message = "file loader creation unsuccessful: file system exception";
+            }
+        }
+        fileRelatedReply(Commands.FILE_MODIFY_RESPONSE, fileDescriptor, pathName,
+                false, message);
+    }
+
+    private void fileDeleteRequest(Document msgIn) throws BadMessageException {
+        Document fileDescriptor = msgIn.getDocument(Commands.FILE_DESCRIPTOR);
+        String pathName = msgIn.getString(Commands.PATH_NAME);
         String message;
+        boolean status = false;
 
-        // field names
-        String pathName, md5, content;
-        Document fileDescriptor;
-        long fileSize, lastModified, position, length;
-        Boolean status = false;
+        // check the file can be deleted
+        if (!fileSystemManager.isSafePathName(pathName)) {
+            message = "unsafe pathname given";
+        } else if (!fileSystemManager.fileNameExists(pathName)) {
+            message = "pathname does not exist";
+        } else {
+            String md5 = fileDescriptor.getString(Commands.MD5);
+            long lastModified = fileDescriptor.getLong(Commands.LAST_MODIFIED);
+            status = fileSystemManager.deleteFile(pathName, lastModified, md5);
+            if (status) {
+                message = "file deleted";
+            } else {
+                message = "there was a problem deleting the file";
+            }
+        }
+        fileRelatedReply(Commands.FILE_DELETE_RESPONSE, fileDescriptor, pathName,
+                status, message);
+    }
 
-        // used for byte requests
-        byte[] contentBytes;
+    private void dirCreateRequest(Document msgIn) throws BadMessageException {
+        String pathName = msgIn.getString(Commands.PATH_NAME);
+        String message;
+        boolean status = false;
+
+        if (!fileSystemManager.isSafePathName(pathName)) {
+            message = "unsafe pathname given";
+        } else if (fileSystemManager.dirNameExists(pathName)) {
+            message = "pathname already exists";
+        } else {
+            status = fileSystemManager.makeDirectory(pathName);
+            message = "directory created";
+            if (!status) {
+                message = "there was a problem creating the directory";
+            }
+        }
+        dirRelatedReply(Commands.DIRECTORY_CREATE_RESPONSE, pathName, message, status);
+    }
+
+    private void dirDeleteRequest(Document msgIn) throws BadMessageException {
+        String pathName = msgIn.getString(Commands.PATH_NAME);
+        String message;
+        boolean status = false;
+
+        if (!fileSystemManager.isSafePathName(pathName)) {
+            message = "unsafe pathname given";
+        } else if (!fileSystemManager.dirNameExists(pathName)) {
+            message = "pathname does not exist";
+        } else {
+            status = fileSystemManager.deleteDirectory(pathName);
+            message = "directory deleted";
+            if (!status) {
+                message = "there was a problem deleting the directory";
+            }
+        }
+        dirRelatedReply(Commands.DIRECTORY_DELETE_RESPONSE, pathName, message, status);
+    }
+
+    private void fileBytesRequest(Document msgIn) throws BadMessageException {
+        Document fileDescriptor = msgIn.getDocument(Commands.FILE_DESCRIPTOR);
+        String pathName = msgIn.getString(Commands.PATH_NAME);
+        long position = msgIn.getLong("position");
+        long length = msgIn.getLong("length");
+        String md5 = fileDescriptor.getString("md5");
+
+        String content = "";
+        String message = "";
+        boolean status = false;
+
+        //TODO do we need to reject requests if the length < blockSize? doesn't say so in the spec.
+        try {
+            ByteBuffer contentBB = fileSystemManager.readFile(md5, position, length);
+            if (contentBB != null) {
+                content = Base64.getEncoder().encodeToString(contentBB.array());
+                message = "successful read";
+                status = true;
+            } else {
+                message = "unsuccessful read";
+            }
+        } catch (IOException e) {
+            message = "file loader creation unsuccessful: file system exception";
+        } catch (NoSuchAlgorithmException e) {
+            log.severe("Missing hashing algorithm: " + e.getLocalizedMessage());
+            System.exit(1);
+        }
+
+        //TODO update length to reflect actual size of returned content
+        returnBytes(fileDescriptor, pathName, position, length,
+                content, message, status);
+    }
+
+    private void fileBytesResponse(Document msgIn) throws BadMessageException {
+        boolean status = msgIn.getBoolean(Commands.STATUS);
+        if (!status) return;
+
+        Document fileDescriptor = msgIn.getDocument(Commands.FILE_DESCRIPTOR);
+        String pathName = msgIn.getString(Commands.PATH_NAME);
+        String content = msgIn.getString(Commands.CONTENT);
+        long position = msgIn.getLong("position");
+        long length = msgIn.getLong("length");
+        long fileSize = fileDescriptor.getLong(Commands.FILE_SIZE);
+
         ByteBuffer contentBB;
+        try {
+            byte[] contentBytes = Base64.getDecoder().decode(content);
+            // TODO handle exception if we the peer gives us the wrong length! or calculate our own length?
+            // Also what if length > MAX_INT?
+            contentBB = ByteBuffer.allocate((int)length);
+            contentBB.put(contentBytes);
+            contentBB.position(0);
+        } catch (IllegalArgumentException e) {
+            throw new BadMessageException("Malformed bytes response");
+        }
 
+        try {
+            if (fileSystemManager.writeFile(pathName, contentBB, position)) {
+                long newPosition = position + length;
+                if (newPosition < fileSize) {
+                    requestBytes(fileDescriptor, pathName, newPosition, fileSize);
+                } else {
+                    // this must be run as final step to write file
+                    fileSystemManager.checkWriteComplete(pathName);
+                }
+            }
+            else {
+                log.severe("Failed to write bytes to " + pathName);
+            }
+        } catch (NoSuchAlgorithmException e) {
+            log.severe("Missing hashing algorithm: " + e.getLocalizedMessage());
+            System.exit(1);
+        } catch (IOException e) {
+            // TODO Consider better recovery strategies (failure transparancy?)
+            log.severe("I/O error while writing bytes for " + pathName);
+        }
+    }
+
+    public ArrayList<Document> handleMessage(Document msgIn) throws BadMessageException {
+        this.responses = new ArrayList<>();
+        String msgInCommand = msgIn.getString(Commands.COMMAND); // request received
         switch (msgInCommand) {
             case Commands.FILE_CREATE_REQUEST:
-                msgOutCommand = Commands.FILE_CREATE_RESPONSE;
-                fileDescriptor = msgIn.getDocument(Commands.FILE_DESCRIPTOR);
-                pathName = msgIn.getString(Commands.PATH_NAME);
+                fileCreateRequest(msgIn);
+                break;
 
-                // check that the file can be created
-                if (!fileSystemManager.isSafePathName(pathName)) {
-                    message = "unsafe pathname given";
-                } else if (fileSystemManager.fileNameExists(pathName)) {
-                    message = "pathname already exists";
-                } else {
-
-                    // try to create file loader
-                    boolean loaderCreated;
-
-                    md5 = fileDescriptor.getString("md5");
-                    fileSize = safeGetLong(fileDescriptor, "fileSize");
-                    lastModified = safeGetLong(fileDescriptor, "lastModified");
-
-                    try {
-                        loaderCreated = fileSystemManager.createFileLoader(pathName, md5, fileSize, lastModified);
-
-                        if (loaderCreated) {
-                            status = true;
-                            message = "file loader ready";
-
-                            // create a FILE_BYTES_REQUEST
-                            newMsg = newFileBytesRequest(fileDescriptor, pathName, 0, fileSize);
-                            msgOut.add(newMsg);
-                        } else {
-                            message = "file loader creation unsuccessful";
-                        }
-                    } catch (NoSuchAlgorithmException e) {
-                        message = "file loader creation unsuccessful: MD5 algorithm not available";
-                    } catch (IOException e) {
-                        message = "file loader creation unsuccessful: file system exception";
-                    }
-                }
-                // create FILE_CREATE_RESPONSE
-                newMsg = file_related_reply(msgOutCommand, fileDescriptor, pathName, status, message);
-                msgOut.add(0, newMsg);
+            case Commands.FILE_MODIFY_REQUEST:
+                fileModifyRequest(msgIn);
                 break;
 
             case Commands.FILE_DELETE_REQUEST:
-                msgOutCommand = Commands.FILE_DELETE_RESPONSE;
-                fileDescriptor = msgIn.getDocument(Commands.FILE_DESCRIPTOR);
-                pathName = msgIn.getString(Commands.PATH_NAME);
-
-                // check the file can be deleted
-                if (!fileSystemManager.isSafePathName(msgIn.getString("pathName"))) {
-                    message = "unsafe pathname given";
-                } else if (!fileSystemManager.fileNameExists(msgIn.getString("pathName"))) {
-                    message = "pathname does not exist";
-                } else {
-                    lastModified = fileDescriptor.getLong(Commands.LAST_MODIFIED);
-                    md5 = fileDescriptor.getString(Commands.MD5);
-
-                    status = fileSystemManager.deleteFile(pathName, lastModified, md5);
-                    if (status) {
-                        message = "file deleted";
-                        msgOutCommand = Commands.FILE_DELETE_RESPONSE;
-                    } else {
-                        message = "there was a problem deleting the file";
-                    }
-                }
-                newMsg = file_related_reply(msgOutCommand, fileDescriptor, pathName, status, message);
-                msgOut.add(newMsg);
-                break;
-
-            //TODO implement FILE_BYTES_REQUEST for modifying files
-            case Commands.FILE_MODIFY_REQUEST:
-                msgOutCommand = Commands.FILE_MODIFY_RESPONSE;
-                fileDescriptor = msgIn.getDocument(Commands.FILE_DESCRIPTOR);
-                pathName = msgIn.getString(Commands.PATH_NAME);
-
-                // check that the file can be modified
-                if (!fileSystemManager.isSafePathName(msgIn.getString("pathName"))) {
-                    message = "unsafe pathname given";
-                } else if (!fileSystemManager.fileNameExists(msgIn.getString("pathName"))) {
-                    message = "pathname does not exist";
-                } else {
-                    lastModified = fileDescriptor.getLong(Commands.LAST_MODIFIED);
-                    md5 = fileDescriptor.getString(Commands.MD5);
-                    fileSize = safeGetLong(fileDescriptor, "fileSize");
-
-                    // try to create file loader
-                    boolean loaderCreated;
-
-                    try {
-                        loaderCreated = fileSystemManager.modifyFileLoader(pathName, md5, lastModified);
-
-                        if (loaderCreated) {
-                            status = true;
-                            message = "file loader ready";
-
-                            // create a FILE_BYTES_REQUEST
-                            newMsg = newFileBytesRequest(fileDescriptor, pathName, 0, fileSize);
-                            msgOut.add(newMsg);
-                        } else {
-                            message = "file loader creation unsuccessful";
-                        }
-                    } catch (IOException e) {
-                        message = "file loader creation unsuccessful: file system exception";
-                    }
-
-                }
-                newMsg = file_related_reply(msgOutCommand, fileDescriptor, pathName, status, message);
-                msgOut.add(newMsg);
+                fileDeleteRequest(msgIn);
                 break;
 
             case Commands.DIRECTORY_CREATE_REQUEST:
-                pathName = msgIn.getString(Commands.PATH_NAME);
-                msgOutCommand = Commands.DIRECTORY_CREATE_RESPONSE;
-
-                if (fileSystemManager.isSafePathName(pathName)) {
-                    message = "unsafe pathname given";
-                } else if (fileSystemManager.dirNameExists(pathName)) {
-                    message = "pathname already exists";
-                } else {
-                    status = fileSystemManager.makeDirectory(pathName);
-                    message = "directory created";
-                    if (!status) {
-                        message = "there was a problem creating the directory";
-                    }
-                }
-                newMsg = dir_related_reply(msgOutCommand, pathName, message, status);
-                msgOut.add(newMsg);
+                dirCreateRequest(msgIn);
                 break;
 
             case Commands.DIRECTORY_DELETE_REQUEST:
-                pathName = msgIn.getString(Commands.PATH_NAME);
-                msgOutCommand = Commands.DIRECTORY_DELETE_RESPONSE;
-
-                if (fileSystemManager.isSafePathName(pathName)) {
-                    message = "unsafe pathname given";
-                } else if (!fileSystemManager.dirNameExists(pathName)) {
-                    message = "pathname does not exist";
-                } else {
-                    status = fileSystemManager.deleteDirectory(pathName);
-                    message = "directory deleted";
-                    if (!status) {
-                        message = "there was a problem deleting the directory";
-                    }
-                }
-                newMsg = dir_related_reply(msgOutCommand, pathName, message, status);
-                msgOut.add(newMsg);
-                break;
-
-
-            case Commands.FILE_BYTES_RESPONSE:
-
-                status = msgIn.getBoolean("status");
-                if (status == false) break;
-
-                fileDescriptor = msgIn.getDocument("fileDescriptor");
-                pathName = msgIn.getString("pathName");
-                content = msgIn.getString("content");
-                position = safeGetLong(msgIn, "position");
-                length = safeGetLong(msgIn, "length");
-                fileSize = safeGetLong(fileDescriptor, "fileSize");
-
-
-                contentBytes = Base64.getDecoder().decode(content);
-                // TODO handle exception if we the peer gives us the wrong length! or calculate our own length?
-                contentBB = ByteBuffer.allocate((int) length);
-                contentBB.put(contentBytes);
-                contentBB.position(0);
-
-                try {
-                    if (fileSystemManager.writeFile(pathName, contentBB, position)) {
-                        long newPosition = position + length;
-
-                        try {
-                            if (newPosition < fileSize) {
-                                newMsg = newFileBytesRequest(fileDescriptor, pathName, newPosition, fileSize);
-                                msgOut.add(newMsg);
-                            } else {
-                                // this must be run as final step to write file
-                                fileSystemManager.checkWriteComplete(pathName);
-                            }
-                        } catch (NoSuchAlgorithmException e) {
-                            //TODO need to handle
-                            e.printStackTrace();
-                        } catch (IOException e) {
-                            //TODO need to handle
-                            e.printStackTrace();
-                        }
-
-                    }
-                } catch (IOException e) {
-                    //TODO need to handle
-                    e.printStackTrace();
-                }
+                dirDeleteRequest(msgIn);
                 break;
 
             case Commands.FILE_BYTES_REQUEST:
+                fileBytesRequest(msgIn);
+                break;
 
-                fileDescriptor = msgIn.getDocument("fileDescriptor");
-                md5 = fileDescriptor.getString("md5");
-                position = safeGetLong(msgIn, "position");
-                length = safeGetLong(msgIn, "length");
-
-                pathName = msgIn.getString("pathName");
-
-                //TODO do we need to reject requests if the length < blockSize? doesn't say so in the spec.
-
-                try {
-                    contentBB = fileSystemManager.readFile(md5, position, length);
-
-                    if (contentBB != null) {
-                        contentBytes = contentBB.array();
-                        content = Base64.getEncoder().encodeToString(contentBytes);
-                        message = "successful read";
-                        status = true;
-                    } else {
-                        content = "";
-                        message = "unsuccessful read";
-                    }
-                } catch (IOException e) {
-                    content = "";
-                    message = "file loader creation unsuccessful: file system exception";
-                } catch (NoSuchAlgorithmException e) {
-                    content = "";
-                    message = "file loader creation unsuccessful: MD5 algorithm not available";
-                }
-
-                //TODO update length to reflect actual size of returned content
-                newMsg = newFileBytesResponse(fileDescriptor, pathName, position, length, content, message, status);
-                msgOut.add(newMsg);
+            case Commands.FILE_BYTES_RESPONSE:
+                fileBytesResponse(msgIn);
                 break;
         }
-
-
-        return msgOut;
+        return this.responses;
     }
 
 
@@ -281,9 +275,8 @@ public class CommandProcessor {
      * @param pathName the path of the file
      * @param status whether the request was successfully fulfilled
      * @param message details of why the request succeeded/failed
-     * @return the reply message
      */
-    private Document file_related_reply(String response, Document fileDescriptor, String pathName,
+    private void fileRelatedReply(String response, Document fileDescriptor, String pathName,
                                         Boolean status, String message) {
         Document replyMsg = new Document();
         replyMsg.append(Commands.COMMAND, response);
@@ -291,7 +284,7 @@ public class CommandProcessor {
         replyMsg.append(Commands.PATH_NAME, pathName);
         replyMsg.append(Commands.STATUS, status);
         replyMsg.append(Commands.MESSAGE, message);
-        return replyMsg;
+        this.responses.add(replyMsg);
     }
 
     /**
@@ -300,45 +293,18 @@ public class CommandProcessor {
      * @param pathName the path of the file
      * @param status whether the request was successfully fulfilled
      * @param message details of why the request succeeded/failed
-     * @return the reply message
      */
-    private Document dir_related_reply(String response, String pathName, String message,
+    private void dirRelatedReply(String response, String pathName, String message,
                                        Boolean status) {
         Document replyMsg = new Document();
         replyMsg.append(Commands.COMMAND, response);
         replyMsg.append(Commands.PATH_NAME, pathName);
         replyMsg.append(Commands.MESSAGE, message);
         replyMsg.append(Commands.STATUS, status);
-        return replyMsg;
+        this.responses.add(replyMsg);
     }
 
-    /**
-     * Checks if any fields are missing
-     * @param command the protocol of the message
-     * @param msg the JSON message being received
-     * @return
-     */
-    private String checkFieldsComplete(String command, Document msg) {
-        for (String field: (String[]) Commands.validFields.get(command)) {
-            if (!msg.containsKey(field)) {
-                return missingField(field);
-            }
-        }
-        return "";
-    }
-
-    /**
-     * Returns the missing field error message
-     * @param field the field that is missing
-     * @return the error message
-     */
-    private String missingField(String field) {
-        return "message is missing required field: " + field;
-    }
-
-
-
-    private Document newFileBytesRequest (Document fileDescriptor, String pathName, long position, long fileSize) {
+    private void requestBytes(Document fileDescriptor, String pathName, long position, long fileSize) {
         Document msg = new Document();
 
         // calculate length to request
@@ -352,10 +318,10 @@ public class CommandProcessor {
         msg.append(Commands.POSITION, position);
         msg.append(Commands.LENGTH, length);
 
-        return msg;
+        this.responses.add(msg);
     }
 
-    private Document newFileBytesResponse (Document fileDescriptor, String pathName, long position, long length,
+    private void returnBytes(Document fileDescriptor, String pathName, long position, long length,
                                            String content, String message, Boolean status) {
         Document msg = new Document();
         msg.append(Commands.COMMAND, Commands.FILE_BYTES_RESPONSE);
@@ -366,25 +332,7 @@ public class CommandProcessor {
         msg.append(Commands.CONTENT, content);
         msg.append(Commands.MESSAGE, message);
         msg.append(Commands.STATUS, status);
-        return msg;
-    }
-
-
-    //TODO can remove if we implement a check in Commands.java that message fields are in correct type
-    private long safeGetLong (Document doc, String key) throws BadMessageException {
-
-        long val;
-        try {
-            val = doc.getLong(key);
-        } catch (ClassCastException | NullPointerException e) {
-            try {
-                val = Long.parseLong(doc.getString(key));
-            } catch (NumberFormatException f) {
-                val = -1;
-            }
-        }
-        return val;
-
+        this.responses.add(msg);
     }
 
 }

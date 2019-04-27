@@ -1,5 +1,7 @@
 package unimelb.bitbox.util;
 
+import unimelb.bitbox.BadMessageException;
+
 /**
  * Simple class to manage a host string and port number. Provides conversion to and from a {@link Document}
  * which further provides conversion to a JSON string.
@@ -17,7 +19,7 @@ public class HostPort {
 		this.host=hostPort.split(":")[0];
 		this.port=Integer.parseInt(hostPort.split(":")[1]);
 	}
-	public HostPort(Document hostPort) {
+	public HostPort(Document hostPort) throws BadMessageException {
 		this.host=hostPort.getString("host");
 		this.port=(int) hostPort.getLong("port");
 	}

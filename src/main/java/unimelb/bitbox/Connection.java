@@ -135,14 +135,14 @@ public class Connection extends Thread {
         sendMessageToPeer(doc);
 
         Document reply = receiveMessageFromPeer();
-        if (reply.get("command").equals(Commands.CONNECTION_REFUSED)) {
-            Peer.discoveredPeers((ArrayList)reply.get("peers"));
+        if (reply.getString("command").equals(Commands.CONNECTION_REFUSED)) {
+            //Peer.discoveredPeers((ArrayList)reply.getList("peers"));
             return false;
-        } else if (!reply.get("command").equals(Commands.HANDSHAKE_RESPONSE)) {
+        } else if (!reply.getString("command").equals(Commands.HANDSHAKE_RESPONSE)) {
             throw new BadMessageException("Peer did not respond with handshake response, responded with "
                     + reply.getString(Commands.COMMAND));
         }
-        remoteHostPort = new HostPort((Document)reply.get("hostPort"));
+        remoteHostPort = new HostPort(reply.getDocument("hostPort"));
         return true;
     }
 
@@ -190,10 +190,10 @@ public class Connection extends Thread {
 
     private boolean receiveHandshake() throws IOException, BadMessageException {
         Document request = receiveMessageFromPeer();
-        if (!request.get(Commands.COMMAND).equals(Commands.HANDSHAKE_REQUEST)) {
+        if (!request.getString(Commands.COMMAND).equals(Commands.HANDSHAKE_REQUEST)) {
             throw new BadMessageException("Peer did not open with handshake request");
         }
-        remoteHostPort = new HostPort((Document) request.get("hostPort"));
+        remoteHostPort = new HostPort(request.getDocument("hostPort"));
         if (server.countIncomingConnections() >=
                 Integer.parseInt(Configuration.getConfigurationValue("maximumIncommingConnections"))) {
             refuseConnection();

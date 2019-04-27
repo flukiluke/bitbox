@@ -126,7 +126,15 @@ public class Document {
 	        throw new BadMessageException("No object field " + key);
         }
     }
-	
+
+    public long getLong(String key){
+        return (long) obj.get(key);
+    }
+
+    public boolean getBoolean(String key){
+        return (boolean) obj.get(key);
+    }
+
 	private ArrayList<Object> getList(JSONArray o){
 		ArrayList<Object> list = new ArrayList<Object>();
 		for(Object l : (JSONArray)o){
@@ -153,16 +161,5 @@ public class Document {
 		}
 		
 	}*/
-	
-	public int getInteger(String key){
-		return (int) obj.get(key);
-	}
-	
-	public long getLong(String key){
-		return (long) obj.get(key);
-	}
-	
-	public boolean getBoolean(String key){
-		return (boolean) obj.get(key);
-	}
+
 }
