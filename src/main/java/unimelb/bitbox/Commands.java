@@ -3,7 +3,7 @@ package unimelb.bitbox;
 import java.util.HashMap;
 
 public class Commands {
-    // list of protocols
+    // list of protocol commands
     public final static String INVALID_PROTOCOL = "INVALID_PROTOCOL";
     public final static String CONNECTION_REFUSED = "CONNECTION_REFUSED";
 
@@ -85,24 +85,6 @@ public class Commands {
             STATUS
     };
 
-    public final static String[] requests = {
-            FILE_CREATE_REQUEST,
-            FILE_DELETE_REQUEST,
-            FILE_MODIFY_REQUEST,
-            DIRECTORY_CREATE_REQUEST,
-            DIRECTORY_DELETE_REQUEST,
-            FILE_BYTES_REQUEST
-    };
-
-    public final static String[] responses = {
-            FILE_CREATE_RESPONSE,
-            FILE_DELETE_RESPONSE,
-            FILE_MODIFY_RESPONSE,
-            DIRECTORY_CREATE_RESPONSE,
-            DIRECTORY_DELETE_RESPONSE,
-            FILE_BYTES_RESPONSE
-    };
-
     public final static HashMap validFields = new HashMap();
     static {
         validFields.put(FILE_CREATE_REQUEST, fileReqFields);
@@ -117,23 +99,5 @@ public class Commands {
         validFields.put(DIRECTORY_DELETE_RESPONSE, dirResFields);
         validFields.put(FILE_BYTES_REQUEST, bytesReqFields);
         validFields.put(FILE_BYTES_RESPONSE, bytesResFields);
-    }
-
-    public static boolean isRequest(String command) {
-        for (int i = 0; i < requests.length; i++) {
-            if (requests[i].equals(command)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public static boolean isResponse(String command) {
-        for (int i = 0; i < responses.length; i++) {
-            if (responses[i].equals(command)) {
-                return true;
-            }
-        }
-        return true;
     }
 }

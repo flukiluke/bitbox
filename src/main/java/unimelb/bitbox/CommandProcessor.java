@@ -17,17 +17,13 @@ public class CommandProcessor {
         this.fileSystemManager = fileSystemManager;
     }
 
-    public ArrayList<Document> handleMessage(Document msgIn) {
-
-        ArrayList<Document> msgOut = new ArrayList<Document>();
-        Document newMsg = new Document();
-
+    public ArrayList<Document> handleMessage(Document msgIn) throws BadMessageException {
+        ArrayList<Document> msgOut = new ArrayList<>();
+        Document newMsg;
 
         String msgInCommand = msgIn.getString(Commands.COMMAND); // request received
-        String msgOutCommand = Commands.INVALID_PROTOCOL; // default response
-
-        // no further handling needed
-        if (msgInCommand.equals(Commands.INVALID_PROTOCOL)) return msgOut;
+        String msgOutCommand;
+        String message;
 
         // field names
         String pathName, md5, content;
@@ -39,23 +35,10 @@ public class CommandProcessor {
         byte[] contentBytes;
         ByteBuffer contentBB;
 
-        String message = checkFieldsComplete(msgInCommand, msgIn); // message field
-
-        // check if there were any missing fields identified
-        // (if there were, the message will contain a missing fields message)
-        if (!message.equals("")) {
-            newMsg.append(Commands.COMMAND, msgOutCommand);
-            newMsg.append(Commands.MESSAGE, message);
-            msgOut.add(newMsg);
-            return msgOut;
-        }
-
-        msgOutCommand = msgIn.getString(Commands.COMMAND);
         switch (msgInCommand) {
-
             case Commands.FILE_CREATE_REQUEST:
                 msgOutCommand = Commands.FILE_CREATE_RESPONSE;
-                fileDescriptor = (Document) msgIn.get(Commands.FILE_DESCRIPTOR);
+                fileDescriptor = msgIn.getDocument(Commands.FILE_DESCRIPTOR);
                 pathName = msgIn.getString(Commands.PATH_NAME);
 
                 // check that the file can be created
@@ -98,7 +81,7 @@ public class CommandProcessor {
 
             case Commands.FILE_DELETE_REQUEST:
                 msgOutCommand = Commands.FILE_DELETE_RESPONSE;
-                fileDescriptor = (Document) msgIn.get(Commands.FILE_DESCRIPTOR);
+                fileDescriptor = msgIn.getDocument(Commands.FILE_DESCRIPTOR);
                 pathName = msgIn.getString(Commands.PATH_NAME);
 
                 // check the file can be deleted
@@ -125,7 +108,7 @@ public class CommandProcessor {
             //TODO implement FILE_BYTES_REQUEST for modifying files
             case Commands.FILE_MODIFY_REQUEST:
                 msgOutCommand = Commands.FILE_MODIFY_RESPONSE;
-                fileDescriptor = (Document) msgIn.get(Commands.FILE_DESCRIPTOR);
+                fileDescriptor = msgIn.getDocument(Commands.FILE_DESCRIPTOR);
                 pathName = msgIn.getString(Commands.PATH_NAME);
 
                 // check that the file can be modified
@@ -165,6 +148,7 @@ public class CommandProcessor {
 
             case Commands.DIRECTORY_CREATE_REQUEST:
                 pathName = msgIn.getString(Commands.PATH_NAME);
+                msgOutCommand = Commands.DIRECTORY_CREATE_RESPONSE;
 
                 if (fileSystemManager.isSafePathName(pathName)) {
                     message = "unsafe pathname given";
@@ -183,6 +167,7 @@ public class CommandProcessor {
 
             case Commands.DIRECTORY_DELETE_REQUEST:
                 pathName = msgIn.getString(Commands.PATH_NAME);
+                msgOutCommand = Commands.DIRECTORY_DELETE_RESPONSE;
 
                 if (fileSystemManager.isSafePathName(pathName)) {
                     message = "unsafe pathname given";
@@ -205,7 +190,7 @@ public class CommandProcessor {
                 status = msgIn.getBoolean("status");
                 if (status == false) break;
 
-                fileDescriptor = (Document) msgIn.get("fileDescriptor");
+                fileDescriptor = msgIn.getDocument("fileDescriptor");
                 pathName = msgIn.getString("pathName");
                 content = msgIn.getString("content");
                 position = safeGetLong(msgIn, "position");
@@ -248,7 +233,7 @@ public class CommandProcessor {
 
             case Commands.FILE_BYTES_REQUEST:
 
-                fileDescriptor = (Document) msgIn.get("fileDescriptor");
+                fileDescriptor = msgIn.getDocument("fileDescriptor");
                 md5 = fileDescriptor.getString("md5");
                 position = safeGetLong(msgIn, "position");
                 length = safeGetLong(msgIn, "length");
@@ -386,7 +371,7 @@ public class CommandProcessor {
 
 
     //TODO can remove if we implement a check in Commands.java that message fields are in correct type
-    private long safeGetLong (Document doc, String key) {
+    private long safeGetLong (Document doc, String key) throws BadMessageException {
 
         long val;
         try {

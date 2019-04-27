@@ -6,6 +6,7 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import unimelb.bitbox.BadMessageException;
 
 /**
  * Helper class for using JSON. Example usage:
@@ -108,9 +109,23 @@ public class Document {
 		return obj.containsKey(key);
 	}
 	
-	public String getString(String key){
-		return (String) obj.get(key);
+	public String getString(String key) throws BadMessageException {
+	    try {
+            return (String) obj.get(key);
+        }
+	    catch (ClassCastException e) {
+            throw new BadMessageException("No string field " + key);
+        }
 	}
+
+	public Document getDocument(String key) throws BadMessageException {
+	    try {
+	        return new Document((JSONObject)obj.get(key));
+        }
+	    catch (ClassCastException e) {
+	        throw new BadMessageException("No object field " + key);
+        }
+    }
 	
 	private ArrayList<Object> getList(JSONArray o){
 		ArrayList<Object> list = new ArrayList<Object>();
@@ -125,18 +140,19 @@ public class Document {
 		}
 		return list;
 	}
-	
+
+	/*
 	public Object get(String key){
 		Object o = obj.get(key);
 		if(o instanceof JSONObject){
-			return (Object) new Document((JSONObject) o);
+			return new Document((JSONObject) o);
 		} else if(o instanceof JSONArray){
 			return getList((JSONArray)o);
 		} else {
 			return o;
 		}
 		
-	}
+	}*/
 	
 	public int getInteger(String key){
 		return (int) obj.get(key);

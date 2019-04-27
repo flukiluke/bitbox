@@ -98,16 +98,9 @@ public class Connection extends Thread {
             while (!interrupted()) {
                 ArrayList<Document> msgOut;
                 Document msgIn = receiveMessageFromPeer();
-
-                //TODO if statement no longer necessary; remove
-                String command = msgIn.getString(Commands.COMMAND);
-                if (Commands.isRequest(command) || Commands.isResponse(command)) {
-                    msgOut = commandProcessor.handleMessage(msgIn);
-                    for (Document msg : msgOut) {
-                        sendMessageToPeer(msg);
-                    }
-                } else {
-                    throw new BadMessageException("Unknown or illegal command " + command);
+                msgOut = commandProcessor.handleMessage(msgIn);
+                for (Document msg : msgOut) {
+                    sendMessageToPeer(msg);
                 }
             }
         } catch (IOException e) {
@@ -146,13 +139,14 @@ public class Connection extends Thread {
             Peer.discoveredPeers((ArrayList)reply.get("peers"));
             return false;
         } else if (!reply.get("command").equals(Commands.HANDSHAKE_RESPONSE)) {
-            throw new BadMessageException("Peer did not respond with handshake response, responded with " +  reply.getString(Commands.COMMAND));
+            throw new BadMessageException("Peer did not respond with handshake response, responded with "
+                    + reply.getString(Commands.COMMAND));
         }
         remoteHostPort = new HostPort((Document)reply.get("hostPort"));
         return true;
     }
 
-    public void sendFileReq(FileSystemEvent fileSystemEvent) throws IOException{
+    public void sendFileReq(FileSystemEvent fileSystemEvent) throws IOException {
         Document doc = new Document();
         String command;
 
@@ -177,7 +171,7 @@ public class Connection extends Thread {
      * @param fileSystemEvent the directory event that occurred
      * @throws IOException if an I/O error occurs
      */
-    public void sendDirReq(FileSystemEvent fileSystemEvent) throws IOException{
+    public void sendDirReq(FileSystemEvent fileSystemEvent) throws IOException {
         Document doc = new Document();
         String command;
 
@@ -236,12 +230,6 @@ public class Connection extends Thread {
         }
         catch (IOException e) {
             // At this point just give up - connection is getting closed anyway
-        }
-    }
-
-    public class BadMessageException extends Exception {
-        public BadMessageException(String message) {
-            super(message);
         }
     }
 

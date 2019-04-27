@@ -20,7 +20,8 @@ public class Peer
     public static void main( String[] args ) throws IOException, NumberFormatException, NoSuchAlgorithmException
     {
     	System.setProperty("java.util.logging.SimpleFormatter.format",
-                "[%1$tc] %2$s %4$s: %5$s%n");
+                //"[%1$tc] %2$s %4$s: %5$s%n");
+                "%5$s%n");
         log.info("BitBox Peer starting...");
 
         Configuration.getConfiguration();
