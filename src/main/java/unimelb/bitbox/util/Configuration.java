@@ -1,5 +1,7 @@
 package unimelb.bitbox.util;
 
+import unimelb.bitbox.Commands;
+
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -55,8 +57,8 @@ public class Configuration {
 
     public static Document getLocalHostPort() {
         Document localHostPort = new Document();
-        localHostPort.append("host", Configuration.getConfigurationValue("advertisedName"));
-        localHostPort.append("port", Integer.parseInt(Configuration.getConfigurationValue("port")));
+        localHostPort.append(Commands.HOST, Configuration.getConfigurationValue("advertisedName"));
+        localHostPort.append(Commands.PORT, Integer.parseInt(Configuration.getConfigurationValue(Commands.PORT)));
         return localHostPort;
     }
 

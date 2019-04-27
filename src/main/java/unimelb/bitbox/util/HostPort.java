@@ -1,6 +1,7 @@
 package unimelb.bitbox.util;
 
 import unimelb.bitbox.BadMessageException;
+import unimelb.bitbox.Commands;
 
 /**
  * Simple class to manage a host string and port number. Provides conversion to and from a {@link Document}
@@ -20,13 +21,13 @@ public class HostPort {
 		this.port=Integer.parseInt(hostPort.split(":")[1]);
 	}
 	public HostPort(Document hostPort) throws BadMessageException {
-		this.host=hostPort.getString("host");
-		this.port=(int) hostPort.getLong("port");
+		this.host=hostPort.getString(Commands.HOST);
+		this.port=(int) hostPort.getLong(Commands.PORT);
 	}
 	public Document toDoc() {
 		Document hp = new Document();
-		hp.append("host", host);
-		hp.append("port", port);
+		hp.append(Commands.HOST, host);
+		hp.append(Commands.PORT, port);
 		return hp;
 	}
 	public String toString() {

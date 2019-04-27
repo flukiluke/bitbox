@@ -214,7 +214,8 @@ public class FileSystemManager extends Thread {
      * @throws IOException Thrown if an initial scan of the share directory fails.
      * @throws NoSuchAlgorithmException Thrown if the MD5 hash algorithm is not available.
      */
-    public FileSystemManager(String root, FileSystemObserver fileSystemObserver) throws IOException, NoSuchAlgorithmException{
+    public FileSystemManager(String root, FileSystemObserver fileSystemObserver)
+            throws IOException, NoSuchAlgorithmException{
         this.fileSystemObserver=fileSystemObserver;
         this.root=root;
         watchedFiles=new HashMap<String,FileDescriptor>();
@@ -390,7 +391,8 @@ public class FileSystemManager extends Thread {
      * @throws IOException if any exceptions arose as the result of accessing the file system.
      * @throws NoSuchAlgorithmException if the MD5 hash algorithm is not available.
      */
-    public boolean createFileLoader(String pathName, String md5, long length, long lastModified) throws NoSuchAlgorithmException, IOException {
+    public boolean createFileLoader(String pathName, String md5, long length, long lastModified)
+            throws NoSuchAlgorithmException, IOException {
         pathName=separatorsToSystem(pathName);
         synchronized(this) {
             String fullPathName=root+FileSystems.getDefault().getSeparator()+pathName;
@@ -431,7 +433,8 @@ public class FileSystemManager extends Thread {
      * @throws IOException If there were any problems accessing the file system.
      * @throws NoSuchAlgorithmException  If the MD5 hash algorithm is unavailable.
      */
-    public ByteBuffer readFile(String md5, long position, long length) throws IOException, NoSuchAlgorithmException {
+    public ByteBuffer readFile(String md5, long position, long length)
+            throws IOException, NoSuchAlgorithmException {
         synchronized(this) {
             if(hashMap.containsKey(md5)) {
                 for(String attempt: hashMap.get(md5)) {

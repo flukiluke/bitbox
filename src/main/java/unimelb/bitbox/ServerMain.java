@@ -97,7 +97,7 @@ public class ServerMain implements FileSystemObserver {
     }
 
 	private void listenForNewConnections() throws IOException {
-        ServerSocket serverSocket = new ServerSocket(Integer.parseInt(Configuration.getConfigurationValue("port")));
+        ServerSocket serverSocket = new ServerSocket(Integer.parseInt(Configuration.getConfigurationValue(Commands.PORT)));
         reapConnections();
         showConnections();
         while (true) {
