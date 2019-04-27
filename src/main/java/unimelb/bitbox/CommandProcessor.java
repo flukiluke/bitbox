@@ -69,7 +69,6 @@ public class CommandProcessor {
 
                     // try to create file loader
                     boolean loaderCreated;
-                    System.out.println("000");
 
                     md5 = fileDescriptor.getString("md5");
                     fileSize = safeGetLong(fileDescriptor, "fileSize");
@@ -146,15 +145,30 @@ public class CommandProcessor {
                 } else {
                     lastModified = fileDescriptor.getLong(Commands.LAST_MODIFIED);
                     md5 = fileDescriptor.getString(Commands.MD5);
-                    message = "file loader ready";
+                    fileSize = safeGetLong(fileDescriptor, "fileSize");
+
+                    // try to create file loader
+                    boolean loaderCreated;
+
                     try {
-                        success = fileSystemManager.modifyFileLoader(pathName, md5, lastModified);
+                        loaderCreated = fileSystemManager.modifyFileLoader(pathName, md5, lastModified);
+
+                        if (loaderCreated) {
+                            success = true;
+                            message = "file loader ready";
+
+                            // create a FILE_BYTES_REQUEST
+                            newMsg = newFileBytesRequest(fileDescriptor, pathName, 0, fileSize);
+                            msgOut.add(newMsg);
+                        } else {
+                            success = false;
+                            message = "file loader creation unsuccessful";
+                        }
                     } catch (IOException e) {
-                        message = "trouble accessing file IOException thrown";
+                        success = false;
+                        message = "file loader creation unsuccessful: file system exception";
                     }
-                    if (!success) {
-                        message = "there was a problem modifying the file";
-                    }
+
                 }
                 newMsg = file_related_reply(msgOutCommand, fileDescriptor, pathName, success, message);
                 msgOut.add(newMsg);
@@ -211,19 +225,22 @@ public class CommandProcessor {
                 length = safeGetLong(msgIn, "length");
                 fileSize = safeGetLong(fileDescriptor, "fileSize");
 
+
                 contentBytes = Base64.getDecoder().decode(content);
                 // TODO handle exception if we the peer gives us the wrong length! or calculate our own length?
                 contentBB = ByteBuffer.allocate((int) length);
-                contentBB.put(contentBytes);
 
                 try {
                     if (fileSystemManager.writeFile(pathName, contentBB, position)) {
+                        long newPosition = position + length;
 
                         try {
-                            if (position < fileSize || !fileSystemManager.checkWriteComplete(pathName)) {
-                                long newPosition = position + length;
+                            if (newPosition < fileSize) {
                                 newMsg = newFileBytesRequest(fileDescriptor, pathName, newPosition, fileSize);
                                 msgOut.add(newMsg);
+                            } else {
+                                // this must be run as final step to write file
+                                fileSystemManager.checkWriteComplete(pathName);
                             }
                         } catch (NoSuchAlgorithmException e) {
                             //TODO need to handle
@@ -333,7 +350,6 @@ public class CommandProcessor {
      * @return
      */
     private String checkFieldsComplete(String command, Document msg) {
-        System.out.println(command);
         for (String field: (String[]) Commands.validFields.get(command)) {
             if (!msg.containsKey(field)) {
                 return missingField(field);
