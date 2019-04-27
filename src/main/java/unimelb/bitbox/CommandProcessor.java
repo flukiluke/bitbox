@@ -221,6 +221,7 @@ public class CommandProcessor {
             }
             else {
                 log.severe("Failed to write bytes to " + pathName);
+                fileSystemManager.cancelFileLoader(pathName);
             }
         } catch (NoSuchAlgorithmException e) {
             log.severe("Missing hashing algorithm: " + e.getLocalizedMessage());
@@ -228,6 +229,11 @@ public class CommandProcessor {
         } catch (IOException e) {
             // TODO Consider better recovery strategies (failure transparancy?)
             log.severe("I/O error while writing bytes for " + pathName);
+            try {
+                fileSystemManager.cancelFileLoader(pathName);
+            } catch (IOException f) {
+                // We don't really care
+            }
         }
     }
 
