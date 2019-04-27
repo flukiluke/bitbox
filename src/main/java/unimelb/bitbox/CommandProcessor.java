@@ -33,7 +33,7 @@ public class CommandProcessor {
         String pathName, md5, content;
         Document fileDescriptor;
         long fileSize, lastModified, position, length;
-        Boolean status;
+        Boolean status = false;
 
         // used for byte requests
         byte[] contentBytes;
@@ -83,14 +83,11 @@ public class CommandProcessor {
                             newMsg = newFileBytesRequest(fileDescriptor, pathName, 0, fileSize);
                             msgOut.add(newMsg);
                         } else {
-                            status = false;
                             message = "file loader creation unsuccessful";
                         }
                     } catch (NoSuchAlgorithmException e) {
-                        status = false;
                         message = "file loader creation unsuccessful: MD5 algorithm not available";
                     } catch (IOException e) {
-                        status = false;
                         message = "file loader creation unsuccessful: file system exception";
                     }
                 }
@@ -103,7 +100,6 @@ public class CommandProcessor {
                 msgOutCommand = Commands.FILE_DELETE_RESPONSE;
                 fileDescriptor = (Document) msgIn.get(Commands.FILE_DESCRIPTOR);
                 pathName = msgIn.getString(Commands.PATH_NAME);
-                status = false;
 
                 // check the file can be deleted
                 if (!fileSystemManager.isSafePathName(msgIn.getString("pathName"))) {
@@ -131,7 +127,6 @@ public class CommandProcessor {
                 msgOutCommand = Commands.FILE_MODIFY_RESPONSE;
                 fileDescriptor = (Document) msgIn.get(Commands.FILE_DESCRIPTOR);
                 pathName = msgIn.getString(Commands.PATH_NAME);
-                status = false;
 
                 // check that the file can be modified
                 if (!fileSystemManager.isSafePathName(msgIn.getString("pathName"))) {
@@ -157,11 +152,9 @@ public class CommandProcessor {
                             newMsg = newFileBytesRequest(fileDescriptor, pathName, 0, fileSize);
                             msgOut.add(newMsg);
                         } else {
-                            status = false;
                             message = "file loader creation unsuccessful";
                         }
                     } catch (IOException e) {
-                        status = false;
                         message = "file loader creation unsuccessful: file system exception";
                     }
 
@@ -172,7 +165,6 @@ public class CommandProcessor {
 
             case Commands.DIRECTORY_CREATE_REQUEST:
                 pathName = msgIn.getString(Commands.PATH_NAME);
-                status = false;
 
                 if (fileSystemManager.isSafePathName(pathName)) {
                     message = "unsafe pathname given";
@@ -191,7 +183,6 @@ public class CommandProcessor {
 
             case Commands.DIRECTORY_DELETE_REQUEST:
                 pathName = msgIn.getString(Commands.PATH_NAME);
-                status = false;
 
                 if (fileSystemManager.isSafePathName(pathName)) {
                     message = "unsafe pathname given";
@@ -252,8 +243,6 @@ public class CommandProcessor {
                     e.printStackTrace();
                 }
 
-
-
             case Commands.FILE_BYTES_REQUEST:
 
                 fileDescriptor = (Document) msgIn.get("fileDescriptor");
@@ -276,15 +265,12 @@ public class CommandProcessor {
                     } else {
                         content = "";
                         message = "unsuccessful read";
-                        status = false;
                     }
                 } catch (IOException e) {
                     content = "";
-                    status = false;
                     message = "file loader creation unsuccessful: file system exception";
                 } catch (NoSuchAlgorithmException e) {
                     content = "";
-                    status = false;
                     message = "file loader creation unsuccessful: MD5 algorithm not available";
                 }
 
@@ -292,7 +278,6 @@ public class CommandProcessor {
                 newMsg = newFileBytesResponse(fileDescriptor, pathName, position, length, content, message, status);
                 msgOut.add(newMsg);
                 break;
-
         }
 
 
@@ -306,17 +291,17 @@ public class CommandProcessor {
      * @param response the protocol request
      * @param fileDescriptor the description of the file as a Document object
      * @param pathName the path of the file
-     * @param success whether the request was successfully fulfilled
+     * @param status whether the request was successfully fulfilled
      * @param message details of why the request succeeded/failed
      * @return the reply message
      */
     private Document file_related_reply(String response, Document fileDescriptor, String pathName,
-                                        Boolean success, String message) {
+                                        Boolean status, String message) {
         Document replyMsg = new Document();
         replyMsg.append(Commands.COMMAND, response);
         replyMsg.append(Commands.FILE_DESCRIPTOR, fileDescriptor);
         replyMsg.append(Commands.PATH_NAME, pathName);
-        replyMsg.append(Commands.STATUS, success.toString());
+        replyMsg.append(Commands.STATUS, status.toString());
         replyMsg.append(Commands.MESSAGE, message);
         return replyMsg;
     }
@@ -325,17 +310,17 @@ public class CommandProcessor {
      * Writes the reply message for all directory related requests e.g. DIR_CREATE, DIR_DELETE
      * @param response the protocol request
      * @param pathName the path of the file
-     * @param success whether the request was successfully fulfilled
+     * @param status whether the request was successfully fulfilled
      * @param message details of why the request succeeded/failed
      * @return the reply message
      */
     private Document dir_related_reply(String response, String pathName, String message,
-                                       Boolean success) {
+                                       Boolean status) {
         Document replyMsg = new Document();
         replyMsg.append(Commands.COMMAND, response);
         replyMsg.append(Commands.PATH_NAME, pathName);
         replyMsg.append(Commands.MESSAGE, message);
-        replyMsg.append(Commands.STATUS, success.toString());
+        replyMsg.append(Commands.STATUS, status.toString());
         return replyMsg;
     }
 
@@ -383,7 +368,7 @@ public class CommandProcessor {
     }
 
     private Document newFileBytesResponse (Document fileDescriptor, String pathName, long position, long length,
-                                           String content, String message, boolean status) {
+                                           String content, String message, Boolean status) {
         Document msg = new Document();
         msg.append(Commands.COMMAND, Commands.FILE_BYTES_RESPONSE);
         msg.append(Commands.FILE_DESCRIPTOR, fileDescriptor);
@@ -392,7 +377,7 @@ public class CommandProcessor {
         msg.append(Commands.LENGTH, length);
         msg.append(Commands.CONTENT, content);
         msg.append(Commands.MESSAGE, message);
-        msg.append(Commands.STATUS, status);
+        msg.append(Commands.STATUS, status.toString());
         return msg;
     }
 
