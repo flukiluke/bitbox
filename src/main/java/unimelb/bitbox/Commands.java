@@ -1,5 +1,12 @@
 package unimelb.bitbox;
 
+/**
+ * Convenient list of string literals that appear in the BitBox protocol and configuation.
+ *
+ * Because auto-complete is a wonderful thing.
+ *
+ * @author TransfictionRailways
+ */
 public class Commands {
     // list of protocol commands
     public final static String INVALID_PROTOCOL = "INVALID_PROTOCOL";

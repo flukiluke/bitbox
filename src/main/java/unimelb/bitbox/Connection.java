@@ -19,8 +19,9 @@ import java.util.logging.Logger;
  * Thread class created to handle network IO with a peer. One instance per peer.
  * This is the *only* class allowed to communicate directly to peers.
  *
- * Does this class need some "synchronized"s sprinkled about? Maybe, we'll see
- * what the implementation ends up looking like.
+ * Also handles the initial protocol handshake and fatal errors in peer communications.
+ *
+ * @author TransfictionRailways
  */
 public class Connection extends Thread {
     private static Logger log = Logger.getLogger(ServerMain.class.getName());
@@ -67,6 +68,9 @@ public class Connection extends Thread {
         initialise();
     }
 
+    /**
+     * Perform the handshake with a newly-connected peer. Terminates the connection if it fails.
+     */
     private void initialise() {
         boolean success;
         try {
@@ -93,6 +97,9 @@ public class Connection extends Thread {
         // Everything up to here is synchronous with the constructor's caller
     }
 
+    /**
+     * Main loop for IO thread. Reads message from peer then sends responses.
+     */
     @Override
     public void run() {
         try {
@@ -110,13 +117,24 @@ public class Connection extends Thread {
             terminateConnection(e.getMessage());
         }
     }
-    
+
+    /**
+     * Send message to peer.
+     * @param message The JSON Document to be sent.
+     * @throws IOException If communication fails.
+     */
     private void sendMessageToPeer(Document message) throws IOException {
         outStream.write(message.toJson() + "\n");
         outStream.flush();
         log.info("Sent message to peer: " + message);
     }
 
+    /**
+     * Reads message from peer; blocks on read.
+     * @return Message read from peer.
+     * @throws IOException If communication fails.
+     * @throws BadMessageException If the message is not well-formed.
+     */
     private Document receiveMessageFromPeer() throws BadMessageException, IOException {
         String input = inStream.readLine();
         if (input == null) {
@@ -127,6 +145,12 @@ public class Connection extends Thread {
         return doc;
     }
 
+    /**
+     * Perform the handshake as the initiating party.
+     * @return false if we got CONNECTION_REFUSED, true otherwise
+     * @throws IOException If communication fails
+     * @throws BadMessageException If we received an incorrect message
+     */
     private boolean sendHandshake() throws IOException, BadMessageException {
         Document doc = new Document();
         doc.append(Commands.COMMAND, Commands.HANDSHAKE_REQUEST);
@@ -145,6 +169,35 @@ public class Connection extends Thread {
         return true;
     }
 
+    /**
+     * Perform the handshake as the receiving party.
+     * @return false if we sent CONNECTION_REFUSED because we are at maximumIncommingConnections, true otherwise
+     * @throws IOException If communication fails
+     * @throws BadMessageException If we received an incorrect message
+     */
+    private boolean receiveHandshake() throws IOException, BadMessageException {
+        Document request = receiveMessageFromPeer();
+        if (!request.getString(Commands.COMMAND).equals(Commands.HANDSHAKE_REQUEST)) {
+            throw new BadMessageException("Peer did not open with handshake request");
+        }
+        remoteHostPort = new HostPort(request.getDocument(Commands.HOST_PORT));
+        if (server.countIncomingConnections() >=
+                Integer.parseInt(Configuration.getConfigurationValue("maximumIncommingConnections"))) {
+            refuseConnection();
+            return false;
+        }
+        Document reply = new Document();
+        reply.append(Commands.COMMAND, Commands.HANDSHAKE_RESPONSE);
+        reply.append(Commands.HOST_PORT, Configuration.getLocalHostPort());
+        sendMessageToPeer(reply);
+        return true;
+    }
+
+    /**
+     * Inform the peer about a file-related event (i.e create/modify/delete) on our file system.
+     * @param fileSystemEvent The file event that occurred
+     * @throws IOException If communication fails
+     */
     public void sendFileReq(FileSystemEvent fileSystemEvent) throws IOException {
         Document doc = new Document();
         String command;
@@ -166,9 +219,9 @@ public class Connection extends Thread {
     }
 
     /**
-     * Sends a request involving directory
+     * Inform the peer about a directory-related event (i.e create/delete) on our file system.
      * @param fileSystemEvent the directory event that occurred
-     * @throws IOException if an I/O error occurs
+     * @throws IOException if communication fails
      */
     public void sendDirReq(FileSystemEvent fileSystemEvent) throws IOException {
         Document doc = new Document();
@@ -187,24 +240,9 @@ public class Connection extends Thread {
         sendMessageToPeer(doc);
     }
 
-    private boolean receiveHandshake() throws IOException, BadMessageException {
-        Document request = receiveMessageFromPeer();
-        if (!request.getString(Commands.COMMAND).equals(Commands.HANDSHAKE_REQUEST)) {
-            throw new BadMessageException("Peer did not open with handshake request");
-        }
-        remoteHostPort = new HostPort(request.getDocument(Commands.HOST_PORT));
-        if (server.countIncomingConnections() >=
-                Integer.parseInt(Configuration.getConfigurationValue("maximumIncommingConnections"))) {
-            refuseConnection();
-            return false;
-        }
-        Document reply = new Document();
-        reply.append(Commands.COMMAND, Commands.HANDSHAKE_RESPONSE);
-        reply.append(Commands.HOST_PORT, Configuration.getLocalHostPort());
-        sendMessageToPeer(reply);
-        return true;
-    }
-
+    /**
+     * Send the CONNECTION_REFUSED message to a peer and disconnect.
+     */
     private void refuseConnection() {
         log.severe("Refusing connection from " + clientSocket.getInetAddress());
         Document msg = new Document();
@@ -219,6 +257,10 @@ public class Connection extends Thread {
         }
     }
 
+    /**
+     * Send the INVALID_PROTOCOL message to a peer and disconnect.
+     * @param errorMessage Human-readable explanation of why they are being disconnected
+     */
     private void terminateConnection(String errorMessage) {
         log.severe("Peer sent invalid message, terminating connection with prejudice");
         Document doc = new Document();

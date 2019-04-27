@@ -6,7 +6,11 @@ import unimelb.bitbox.Commands;
 /**
  * Simple class to manage a host string and port number. Provides conversion to and from a {@link Document}
  * which further provides conversion to a JSON string.
+ *
+ * Will throw a BadMessageException if data is malformed or missing.
+ *
  * @author aaron
+ * @author TransfictionRailways
  *
  */
 public class HostPort {

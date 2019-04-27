@@ -9,26 +9,15 @@ import org.json.simple.parser.ParseException;
 import unimelb.bitbox.BadMessageException;
 
 /**
- * Helper class for using JSON. Example usage:
- * <pre>
- * {@code
- * Document doc1 = new Document();
- * doc1.append("host","localhost");
- * doc1.append("port",8111);
- * String host = doc1.getString("host");
- * int port = doc1.getInteger("port");
- * String json1 = doc1.toJson(); // convert Document to a JSON String
- * Document doc2 = Document.parse(json1); // convert JSON String back to Document
- * ArrayList<Document> docs = new ArrayList<Document>();
- * docs.add(doc1);
- * docs.add(doc2);
- * Document doc3 = new Document();
- * doc3.append("docList",docs);
- * doc3.toJson(); // {"docList":[{"host":"localhost","port":8111},{"host":"localhost","port":8111}]}
- * ArrayList<Document> docs2 = (ArrayList<Document>) doc3.get("docList");
- * }
- * </pre>
+ * Helper class for using JSON.
+ *
+ * Provides append() for building JSON and get*() methods for each type of data
+ * to extract it, in general throwing BadMessageException when data is malformed or missing.
+ *
+ * Adapted from a class provided by the Aaron.
+ *
  * @author aaron
+ * @author TransfictionRailways
  *
  */
 public class Document {

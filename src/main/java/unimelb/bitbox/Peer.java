@@ -11,6 +11,13 @@ import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.HostPort;
 
+/**
+ * Main class for the BitBox peer.
+ *
+ * Handles initial outbound connections and starting other components.
+ *
+ * @author TransfictionRailways
+ */
 public class Peer 
 {
 	private static Logger log = Logger.getLogger(Peer.class.getName());
@@ -37,14 +44,21 @@ public class Peer
         new ServerMain(connections);
         
     }
-    
-	private static void establishInitialConnections() {
+
+    /**
+     * Connect to peers defined in our configuration file
+     */
+    private static void establishInitialConnections() {
 		for(HostPort peer : knownPeers) {
 			Connection connection = new Connection(peer.host, peer.port);
             connections.add(connection);
 	    }
 	}
 
+    /**
+     * To be called when a peer refused our connection so we can try connecting to others.
+     * @param peers List of peers we are suggested to try.
+     */
     public static void discoveredPeers(List<Document> peers) {
         for (Document doc : peers) {
             System.out.println("Added " + doc + " to knownHosts");

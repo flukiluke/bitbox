@@ -21,7 +21,15 @@ import java.util.logging.Logger;
  * String[] peers = Configuration.getConfigurationValue("peers").split(",");
  * }
  * </pre>
+ *
+ * Also allows setting command line arguments to override configuration values:
+ * <pre>
+ * {@code
+ * ~$ java -jar bitbox.jar --port=8122
+ * }
+ * </pre>
  * @author aaron
+ * @author TransfictionRailways
  *
  */
 public class Configuration {
@@ -55,6 +63,10 @@ public class Configuration {
         return properties.getProperty(key);
     }
 
+    /** Compute the host-port combination we want to be known as.
+     * This is not a directly-set value but a composition of configuration values.
+     * @return Document containing host and port values
+     */
     public static Document getLocalHostPort() {
         Document localHostPort = new Document();
         localHostPort.append(Commands.HOST, Configuration.getConfigurationValue("advertisedName"));
@@ -66,6 +78,10 @@ public class Configuration {
     private Configuration() {
     }
 
+    /** Read command line and override any configuration values.
+     *
+     * @param args The args array passed to main()
+     */
     public static void parseCmdLineArgs(String[] args) {
         // Expect a series of --x=y arguments
         Pattern pattern = Pattern.compile("^--(.+)=(.*)$");

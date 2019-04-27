@@ -11,6 +11,13 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.logging.Logger;
 
+/**
+ * Logic for acting on commands received from a peer.
+ *
+ * Handles generating responses and driving the file system manager to read/write data.
+ *
+ * @author TransfictionRailways
+ */
 public class CommandProcessor {
     private FileSystemManager fileSystemManager;
     private ArrayList<Document> responses;
@@ -21,6 +28,52 @@ public class CommandProcessor {
         this.fileSystemManager = fileSystemManager;
     }
 
+    /**
+     * Main entry point. Parses a message from the client and acts upon it.
+     * @param msgIn The message from the client
+     * @return A (possibly empty) list of replies to be sent to the client
+     * @throws BadMessageException If the client's message is malformed
+     */
+    public ArrayList<Document> handleMessage(Document msgIn) throws BadMessageException {
+        this.responses = new ArrayList<>();
+        String msgInCommand = msgIn.getString(Commands.COMMAND); // request received
+        switch (msgInCommand) {
+            case Commands.FILE_CREATE_REQUEST:
+                fileCreateRequest(msgIn);
+                break;
+
+            case Commands.FILE_MODIFY_REQUEST:
+                fileModifyRequest(msgIn);
+                break;
+
+            case Commands.FILE_DELETE_REQUEST:
+                fileDeleteRequest(msgIn);
+                break;
+
+            case Commands.DIRECTORY_CREATE_REQUEST:
+                dirCreateRequest(msgIn);
+                break;
+
+            case Commands.DIRECTORY_DELETE_REQUEST:
+                dirDeleteRequest(msgIn);
+                break;
+
+            case Commands.FILE_BYTES_REQUEST:
+                fileBytesRequest(msgIn);
+                break;
+
+            case Commands.FILE_BYTES_RESPONSE:
+                fileBytesResponse(msgIn);
+                break;
+        }
+        return this.responses;
+    }
+
+    /**
+     * Handle request to create a file and start requesting bytes for that file if successful.
+     * @param msgIn The peer's request for file creation
+     * @throws BadMessageException If the request is malformed
+     */
     private void fileCreateRequest(Document msgIn) throws BadMessageException {
         Document fileDescriptor = msgIn.getDocument(Commands.FILE_DESCRIPTOR);
         String pathName = msgIn.getString(Commands.PATH_NAME);
@@ -57,6 +110,11 @@ public class CommandProcessor {
                 false, message);
     }
 
+    /**
+     * Handle request to modify a file and start requesting bytes for that file if successful.
+     * @param msgIn The peer's request for file modification
+     * @throws BadMessageException If the request is malformed
+     */
     private void fileModifyRequest(Document msgIn) throws BadMessageException {
         Document fileDescriptor = msgIn.getDocument(Commands.FILE_DESCRIPTOR);
         String pathName = msgIn.getString(Commands.PATH_NAME);
@@ -90,6 +148,11 @@ public class CommandProcessor {
                 false, message);
     }
 
+    /**
+     * Handle request to delete a file and delete it if possible.
+     * @param msgIn The peer's request for file deletion
+     * @throws BadMessageException If the request is malformed
+     */
     private void fileDeleteRequest(Document msgIn) throws BadMessageException {
         Document fileDescriptor = msgIn.getDocument(Commands.FILE_DESCRIPTOR);
         String pathName = msgIn.getString(Commands.PATH_NAME);
@@ -115,6 +178,11 @@ public class CommandProcessor {
                 status, message);
     }
 
+    /**
+     * Handle request to create a directory and create it if possible.
+     * @param msgIn The peer's request for directory creation
+     * @throws BadMessageException If the request is malformed
+     */
     private void dirCreateRequest(Document msgIn) throws BadMessageException {
         String pathName = msgIn.getString(Commands.PATH_NAME);
         String message;
@@ -134,6 +202,11 @@ public class CommandProcessor {
         dirRelatedReply(Commands.DIRECTORY_CREATE_RESPONSE, pathName, message, status);
     }
 
+    /**
+     * Handle request to delete a directory and delete it if possible.
+     * @param msgIn The peer's request for directory deletion
+     * @throws BadMessageException If the request is malformed
+     */
     private void dirDeleteRequest(Document msgIn) throws BadMessageException {
         String pathName = msgIn.getString(Commands.PATH_NAME);
         String message;
@@ -153,6 +226,11 @@ public class CommandProcessor {
         dirRelatedReply(Commands.DIRECTORY_DELETE_RESPONSE, pathName, message, status);
     }
 
+    /**
+     * Handle request for bytes from a file. Replies with the data if possible.
+     * @param msgIn The peer's request for file data
+     * @throws BadMessageException If the request is malformed
+     */
     private void fileBytesRequest(Document msgIn) throws BadMessageException {
         Document fileDescriptor = msgIn.getDocument(Commands.FILE_DESCRIPTOR);
         String pathName = msgIn.getString(Commands.PATH_NAME);
@@ -186,6 +264,11 @@ public class CommandProcessor {
                 content, message, status);
     }
 
+    /**
+     * Accepts receipt of data from the peer as an answer to one of our requests.
+     * @param msgIn The peer's response with file data
+     * @throws BadMessageException If the response is malformed
+     */
     private void fileBytesResponse(Document msgIn) throws BadMessageException {
         boolean status = msgIn.getBoolean(Commands.STATUS);
         if (!status) return;
@@ -237,46 +320,10 @@ public class CommandProcessor {
         }
     }
 
-    public ArrayList<Document> handleMessage(Document msgIn) throws BadMessageException {
-        this.responses = new ArrayList<>();
-        String msgInCommand = msgIn.getString(Commands.COMMAND); // request received
-        switch (msgInCommand) {
-            case Commands.FILE_CREATE_REQUEST:
-                fileCreateRequest(msgIn);
-                break;
-
-            case Commands.FILE_MODIFY_REQUEST:
-                fileModifyRequest(msgIn);
-                break;
-
-            case Commands.FILE_DELETE_REQUEST:
-                fileDeleteRequest(msgIn);
-                break;
-
-            case Commands.DIRECTORY_CREATE_REQUEST:
-                dirCreateRequest(msgIn);
-                break;
-
-            case Commands.DIRECTORY_DELETE_REQUEST:
-                dirDeleteRequest(msgIn);
-                break;
-
-            case Commands.FILE_BYTES_REQUEST:
-                fileBytesRequest(msgIn);
-                break;
-
-            case Commands.FILE_BYTES_RESPONSE:
-                fileBytesResponse(msgIn);
-                break;
-        }
-        return this.responses;
-    }
-
-
     /**
      * Writes the reply message for all file related requests e.g. FILE_CREATE, FILE_DELETE,
      * FILE_MODIFY
-     * @param response the protocol request
+     * @param response the response command to send
      * @param fileDescriptor the description of the file as a Document object
      * @param pathName the path of the file
      * @param status whether the request was successfully fulfilled
@@ -295,7 +342,7 @@ public class CommandProcessor {
 
     /**
      * Writes the reply message for all directory related requests e.g. DIR_CREATE, DIR_DELETE
-     * @param response the protocol request
+     * @param response the response command to send
      * @param pathName the path of the file
      * @param status whether the request was successfully fulfilled
      * @param message details of why the request succeeded/failed
@@ -310,6 +357,14 @@ public class CommandProcessor {
         this.responses.add(replyMsg);
     }
 
+    /**
+     * Generate a request to the peer for a section of a file. The maximum number of bytes read is
+     * controlled by the blockSize configuration value.
+     * @param fileDescriptor the description of the file as a Document object
+     * @param pathName the path of the file
+     * @param position byte offset to start reading from
+     * @param fileSize the total size of the file
+     */
     private void requestBytes(Document fileDescriptor, String pathName, long position, long fileSize) {
         Document msg = new Document();
 
@@ -327,6 +382,16 @@ public class CommandProcessor {
         this.responses.add(msg);
     }
 
+    /**
+     * Send bytes from a file to the peer.
+     * @param fileDescriptor the description of the file as a Document object
+     * @param pathName the path of the file
+     * @param position the byte offset in the file where this data starts from
+     * @param length the length of the data being sent
+     * @param content data to be sent. Should be base64 encoded.
+     * @param message details of why the request succeeded/failed
+     * @param status whether the request was successfully fulfilled
+     */
     private void returnBytes(Document fileDescriptor, String pathName, long position, long length,
                                            String content, String message, Boolean status) {
         Document msg = new Document();
