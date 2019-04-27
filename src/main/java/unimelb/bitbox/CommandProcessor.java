@@ -216,6 +216,8 @@ public class CommandProcessor {
                 contentBytes = Base64.getDecoder().decode(content);
                 // TODO handle exception if we the peer gives us the wrong length! or calculate our own length?
                 contentBB = ByteBuffer.allocate((int) length);
+                contentBB.put(contentBytes);
+                contentBB.position(0);
 
                 try {
                     if (fileSystemManager.writeFile(pathName, contentBB, position)) {
@@ -242,6 +244,7 @@ public class CommandProcessor {
                     //TODO need to handle
                     e.printStackTrace();
                 }
+                break;
 
             case Commands.FILE_BYTES_REQUEST:
 
@@ -301,7 +304,7 @@ public class CommandProcessor {
         replyMsg.append(Commands.COMMAND, response);
         replyMsg.append(Commands.FILE_DESCRIPTOR, fileDescriptor);
         replyMsg.append(Commands.PATH_NAME, pathName);
-        replyMsg.append(Commands.STATUS, status.toString());
+        replyMsg.append(Commands.STATUS, status);
         replyMsg.append(Commands.MESSAGE, message);
         return replyMsg;
     }
@@ -320,7 +323,7 @@ public class CommandProcessor {
         replyMsg.append(Commands.COMMAND, response);
         replyMsg.append(Commands.PATH_NAME, pathName);
         replyMsg.append(Commands.MESSAGE, message);
-        replyMsg.append(Commands.STATUS, status.toString());
+        replyMsg.append(Commands.STATUS, status);
         return replyMsg;
     }
 
@@ -377,7 +380,7 @@ public class CommandProcessor {
         msg.append(Commands.LENGTH, length);
         msg.append(Commands.CONTENT, content);
         msg.append(Commands.MESSAGE, message);
-        msg.append(Commands.STATUS, status.toString());
+        msg.append(Commands.STATUS, status);
         return msg;
     }
 
