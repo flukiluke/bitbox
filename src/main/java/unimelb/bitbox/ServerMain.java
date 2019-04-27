@@ -34,22 +34,28 @@ public class ServerMain implements FileSystemObserver {
      * @param fileSystemEvent the event that occurred
      */
     @Override
-    public void processFileSystemEvent(FileSystemEvent fileSystemEvent){
-        for (Connection connection: connections) {
-            try {
-                // send a request involving a file
-                if (isFileEvent(fileSystemEvent.event)) {
-                    connection.sendFileReq(fileSystemEvent);
-                }
+    public void processFileSystemEvent(FileSystemEvent fileSystemEvent) {
+        synchronized (connections) {
+            for (Connection connection : connections) {
+                try {
+                    // send a request involving a file
+                    if (isFileEvent(fileSystemEvent.event)) {
+                        connection.sendFileReq(fileSystemEvent);
+                    }
 
-                // send a request involving a directory
-                if (isDirEvent(fileSystemEvent.event)) {
-                    connection.sendDirReq(fileSystemEvent);
+                    // send a request involving a directory
+                    if (isDirEvent(fileSystemEvent.event)) {
+                        connection.sendDirReq(fileSystemEvent);
+                    }
+                } catch (IOException e) {
+                    // Assume peer has disconnected (because of the nature of
+                    // sockets this might not always trigger).
+                    log.severe("Attempt to send to dead peer");
+                    connection.interrupt();
                 }
-            } catch (IOException e) {
-                System.exit(0);
             }
         }
+        reapConnections();
     }
 
     /**

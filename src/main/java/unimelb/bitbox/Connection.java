@@ -28,7 +28,6 @@ public class Connection extends Thread {
     private Socket clientSocket;
     private BufferedWriter outStream;
     private BufferedReader inStream;
-    private FileSystemManager fileSystemManager;
     private ServerMain server;
     public HostPort remoteHostPort;
     public boolean initialised = false;
@@ -51,7 +50,7 @@ public class Connection extends Thread {
             log.severe("Socket creation failed, IO thread exiting");
             return;
         }
-        initialise(true);
+        initialise();
     }
 
     /**
@@ -63,13 +62,12 @@ public class Connection extends Thread {
         isIncomingConnection = true;
         log.info("Start new IO thread for incoming peer at " + clientSocket.getInetAddress());
         this.server = server;
-        this.fileSystemManager = fileSystemManager;
         this.clientSocket = clientSocket;
         this.commandProcessor = new CommandProcessor(fileSystemManager);
-        initialise(false);
+        initialise();
     }
 
-    private void initialise(boolean initiator) {
+    private void initialise() {
         boolean success;
         try {
             outStream = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream(), "UTF-8"));
@@ -97,7 +95,7 @@ public class Connection extends Thread {
     @Override
     public void run() {
         try {
-            while (true) {
+            while (!interrupted()) {
                 ArrayList<Document> msgOut;
                 Document msgIn = receiveMessageFromPeer();
 
@@ -248,7 +246,6 @@ public class Connection extends Thread {
     }
 
     public void setFileSystemManager (FileSystemManager fileSystemManager) {
-        this.fileSystemManager = fileSystemManager;
         this.commandProcessor = new CommandProcessor(fileSystemManager);
     }
 }
