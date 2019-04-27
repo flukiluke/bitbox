@@ -93,16 +93,14 @@ public class Document {
 	    return toJson();
     }
 	
-	public static Document parse(String json) {
+	public static Document parse(String json) throws BadMessageException {
 		JSONParser parser = new JSONParser();
 		try {
-			JSONObject obj  = (JSONObject) parser.parse(json);
+			JSONObject obj = (JSONObject) parser.parse(json);
 			return new Document(obj);
-		} catch (ParseException e) {
-			return new Document();
-		} catch (ClassCastException e){
-			return new Document();
-		}
+		} catch (ParseException | ClassCastException e) {
+            throw new BadMessageException("Malformed JSON");
+        }
 	}
 	
 	public boolean containsKey(String key){
@@ -110,29 +108,51 @@ public class Document {
 	}
 	
 	public String getString(String key) throws BadMessageException {
+	    String val;
 	    try {
-            return (String) obj.get(key);
+            val = (String) obj.get(key);
+            if (val == null) throw new ClassCastException();
         }
 	    catch (ClassCastException e) {
             throw new BadMessageException("No string field " + key);
         }
+	    return val;
 	}
 
 	public Document getDocument(String key) throws BadMessageException {
+	    JSONObject subObj;
 	    try {
-	        return new Document((JSONObject)obj.get(key));
+	        subObj = (JSONObject) obj.get(key);
+	        if (subObj == null) throw new ClassCastException();
         }
 	    catch (ClassCastException e) {
 	        throw new BadMessageException("No object field " + key);
         }
+	    return new Document(subObj);
     }
 
-    public long getLong(String key){
-        return (long) obj.get(key);
+    public long getLong(String key) throws BadMessageException {
+	    Long val;
+	    try {
+	        val = (Long) obj.get(key);
+	        if (val == null) throw new ClassCastException();
+        }
+	    catch (ClassCastException e) {
+            throw new BadMessageException("No long integer field " + key);
+        }
+	    return val;
     }
 
-    public boolean getBoolean(String key){
-        return (boolean) obj.get(key);
+    public boolean getBoolean(String key) throws BadMessageException {
+	    Boolean val;
+        try {
+            val = (Boolean) obj.get(key);
+            if (val == null) throw new ClassCastException();
+        }
+        catch (ClassCastException e) {
+            throw new BadMessageException("No boolean field " + key);
+        }
+        return val;
     }
 
 	private ArrayList<Object> getList(JSONArray o){
@@ -148,18 +168,4 @@ public class Document {
 		}
 		return list;
 	}
-
-	/*
-	public Object get(String key){
-		Object o = obj.get(key);
-		if(o instanceof JSONObject){
-			return new Document((JSONObject) o);
-		} else if(o instanceof JSONArray){
-			return getList((JSONArray)o);
-		} else {
-			return o;
-		}
-		
-	}*/
-
 }

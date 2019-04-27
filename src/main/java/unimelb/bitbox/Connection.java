@@ -86,6 +86,7 @@ public class Connection extends Thread {
             return;
         } catch (BadMessageException e) {
             terminateConnection(e.getMessage());
+            return;
         }
         initialised = true;
         start();
@@ -117,14 +118,13 @@ public class Connection extends Thread {
         log.info("Sent message to peer: " + message);
     }
 
-    private Document receiveMessageFromPeer() throws IOException {
+    private Document receiveMessageFromPeer() throws BadMessageException, IOException {
         String input = inStream.readLine();
         if (input == null) {
             throw new IOException();
         }
         Document doc = Document.parse(input);
         log.info("Received message from peer: " + doc);
-        // Assume doc is valid - should have some kind of checking here
         return doc;
     }
 
@@ -227,6 +227,7 @@ public class Connection extends Thread {
         doc.append("message", errorMessage);
         try {
             sendMessageToPeer(doc);
+            clientSocket.close();
         }
         catch (IOException e) {
             // At this point just give up - connection is getting closed anyway
