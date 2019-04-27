@@ -28,12 +28,8 @@ public class Peer
         Configuration.parseCmdLineArgs(args);
 
         String[] peers = Configuration.getConfigurationValue("peers").split(" ");
-        String address;
-        int port;
         for(String peer : peers) {
-            address = peer.split(":")[0];
-            port = Integer.parseInt(peer.split(":")[1]);
-            knownPeers.add(new HostPort(address, port));
+            knownPeers.add(new HostPort(peer));
         }
         
         establishInitialConnections();

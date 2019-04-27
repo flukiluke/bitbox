@@ -1,7 +1,5 @@
 package unimelb.bitbox;
 
-import java.util.HashMap;
-
 public class Commands {
     // list of protocol commands
     public final static String INVALID_PROTOCOL = "INVALID_PROTOCOL";
@@ -26,7 +24,6 @@ public class Commands {
 
     // list of fields
     public final static String COMMAND = "command";
-    // TODO need to implement checks for particular fields needed within FILE_DESCRIPTOR.
     public final static String FILE_DESCRIPTOR = "fileDescriptor";
     public final static String MD5 = "md5";
     public final static String LAST_MODIFIED = "lastModified";
@@ -37,67 +34,7 @@ public class Commands {
     public final static String POSITION = "position";
     public final static String LENGTH = "length";
     public final static String CONTENT = "content";
+    public final static String HOST_PORT = "hostPort";
+    public final static String PEERS = "peers";
 
-    //TODO need to check the fields are the appropriate type (string, long, boolean, etc.)
-
-    public final static String[] fileReqFields = {
-            COMMAND,
-            FILE_DESCRIPTOR,
-            PATH_NAME
-    };
-
-    public final static String[] fileResFields = {
-            COMMAND,
-            FILE_DESCRIPTOR,
-            PATH_NAME,
-            MESSAGE,
-            STATUS
-    };
-
-    public final static String[] dirReqFields = {
-            COMMAND,
-            PATH_NAME
-    };
-
-    public final static String[] dirResFields = {
-            COMMAND,
-            PATH_NAME,
-            MESSAGE,
-            STATUS
-    };
-
-    public final static String[] bytesReqFields = {
-            COMMAND,
-            FILE_DESCRIPTOR,
-            PATH_NAME,
-            POSITION,
-            LENGTH
-    };
-
-    public final static String[] bytesResFields = {
-            COMMAND,
-            FILE_DESCRIPTOR,
-            PATH_NAME,
-            POSITION,
-            LENGTH,
-            CONTENT,
-            MESSAGE,
-            STATUS
-    };
-
-    public final static HashMap validFields = new HashMap();
-    static {
-        validFields.put(FILE_CREATE_REQUEST, fileReqFields);
-        validFields.put(FILE_CREATE_RESPONSE, fileResFields);
-        validFields.put(FILE_DELETE_REQUEST, fileReqFields);
-        validFields.put(FILE_DELETE_RESPONSE, fileResFields);
-        validFields.put(FILE_MODIFY_REQUEST, fileReqFields);
-        validFields.put(FILE_MODIFY_RESPONSE, fileResFields);
-        validFields.put(DIRECTORY_CREATE_REQUEST, dirReqFields);
-        validFields.put(DIRECTORY_CREATE_RESPONSE, dirResFields);
-        validFields.put(DIRECTORY_DELETE_REQUEST, dirReqFields);
-        validFields.put(DIRECTORY_DELETE_RESPONSE, dirResFields);
-        validFields.put(FILE_BYTES_REQUEST, bytesReqFields);
-        validFields.put(FILE_BYTES_RESPONSE, bytesResFields);
-    }
 }

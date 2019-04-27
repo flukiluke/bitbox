@@ -112,13 +112,16 @@ public class Connection extends Thread {
     }
 
 
-    private void sendMessageToPeer(Document message) throws IOException {
+    /** sendMessageToPeer and receiveMessageFromPeer are synchronized because multiple threads reading/writing
+     * to a socket at the same time with be Bad™
+     */
+    private synchronized void sendMessageToPeer(Document message) throws IOException {
         outStream.write(message.toJson() + "\n");
         outStream.flush();
         log.info("Sent message to peer: " + message);
     }
 
-    private Document receiveMessageFromPeer() throws BadMessageException, IOException {
+    private synchronized Document receiveMessageFromPeer() throws BadMessageException, IOException {
         String input = inStream.readLine();
         if (input == null) {
             throw new IOException();
@@ -131,18 +134,18 @@ public class Connection extends Thread {
     private boolean sendHandshake() throws IOException, BadMessageException {
         Document doc = new Document();
         doc.append(Commands.COMMAND, Commands.HANDSHAKE_REQUEST);
-        doc.append("hostPort", Configuration.getLocalHostPort());
+        doc.append(Commands.HOST_PORT, Configuration.getLocalHostPort());
         sendMessageToPeer(doc);
 
         Document reply = receiveMessageFromPeer();
-        if (reply.getString("command").equals(Commands.CONNECTION_REFUSED)) {
-            //Peer.discoveredPeers((ArrayList)reply.getList("peers"));
+        if (reply.getString(Commands.COMMAND).equals(Commands.CONNECTION_REFUSED)) {
+            //Peer.discoveredPeers((ArrayList)reply.getList(Commands.PEERS));
             return false;
-        } else if (!reply.getString("command").equals(Commands.HANDSHAKE_RESPONSE)) {
+        } else if (!reply.getString(Commands.COMMAND).equals(Commands.HANDSHAKE_RESPONSE)) {
             throw new BadMessageException("Peer did not respond with handshake response, responded with "
                     + reply.getString(Commands.COMMAND));
         }
-        remoteHostPort = new HostPort(reply.getDocument("hostPort"));
+        remoteHostPort = new HostPort(reply.getDocument(Commands.HOST_PORT));
         return true;
     }
 
@@ -193,7 +196,7 @@ public class Connection extends Thread {
         if (!request.getString(Commands.COMMAND).equals(Commands.HANDSHAKE_REQUEST)) {
             throw new BadMessageException("Peer did not open with handshake request");
         }
-        remoteHostPort = new HostPort(request.getDocument("hostPort"));
+        remoteHostPort = new HostPort(request.getDocument(Commands.HOST_PORT));
         if (server.countIncomingConnections() >=
                 Integer.parseInt(Configuration.getConfigurationValue("maximumIncommingConnections"))) {
             refuseConnection();
@@ -201,7 +204,7 @@ public class Connection extends Thread {
         }
         Document reply = new Document();
         reply.append(Commands.COMMAND, Commands.HANDSHAKE_RESPONSE);
-        reply.append("hostPort", Configuration.getLocalHostPort());
+        reply.append(Commands.HOST_PORT, Configuration.getLocalHostPort());
         sendMessageToPeer(reply);
         return true;
     }
@@ -209,9 +212,9 @@ public class Connection extends Thread {
     private void refuseConnection() {
         log.severe("Refusing connection from " + clientSocket.getInetAddress());
         Document msg = new Document();
-        msg.append("command", Commands.CONNECTION_REFUSED);
-        msg.append("message", "Connection limit reached, go away");
-        msg.append("peers", server.getPeerHostPorts());
+        msg.append(Commands.COMMAND, Commands.CONNECTION_REFUSED);
+        msg.append(Commands.MESSAGE, "Connection limit reached, go away");
+        msg.append(Commands.PEERS, server.getPeerHostPorts());
         try {
             sendMessageToPeer(msg);
             clientSocket.close();
@@ -224,7 +227,7 @@ public class Connection extends Thread {
         log.severe("Peer sent invalid message, terminating connection with prejudice");
         Document doc = new Document();
         doc.append(Commands.COMMAND, Commands.INVALID_PROTOCOL);
-        doc.append("message", errorMessage);
+        doc.append(Commands.MESSAGE, errorMessage);
         try {
             sendMessageToPeer(doc);
             clientSocket.close();

@@ -33,9 +33,9 @@ public class CommandProcessor {
             message = "pathname already exists";
         } else {
             // try to create file loader
-            String md5 = fileDescriptor.getString("md5");
-            long fileSize = fileDescriptor.getLong("fileSize");
-            long lastModified = fileDescriptor.getLong("lastModified");
+            String md5 = fileDescriptor.getString(Commands.MD5);
+            long fileSize = fileDescriptor.getLong(Commands.FILE_SIZE);
+            long lastModified = fileDescriptor.getLong(Commands.LAST_MODIFIED);
 
             try {
                 boolean status = fileSystemManager.createFileLoader(pathName, md5, fileSize, lastModified);
@@ -69,9 +69,9 @@ public class CommandProcessor {
             message = "pathname does not exist";
         } else {
             // try to create file loader
-            String md5 = fileDescriptor.getString("md5");
-            long fileSize = fileDescriptor.getLong("fileSize");
-            long lastModified = fileDescriptor.getLong("lastModified");
+            String md5 = fileDescriptor.getString(Commands.MD5);
+            long fileSize = fileDescriptor.getLong(Commands.FILE_SIZE);
+            long lastModified = fileDescriptor.getLong(Commands.LAST_MODIFIED);
 
             try {
                 boolean status = fileSystemManager.modifyFileLoader(pathName, md5, lastModified);
@@ -156,9 +156,9 @@ public class CommandProcessor {
     private void fileBytesRequest(Document msgIn) throws BadMessageException {
         Document fileDescriptor = msgIn.getDocument(Commands.FILE_DESCRIPTOR);
         String pathName = msgIn.getString(Commands.PATH_NAME);
-        long position = msgIn.getLong("position");
-        long length = msgIn.getLong("length");
-        String md5 = fileDescriptor.getString("md5");
+        long position = msgIn.getLong(Commands.POSITION);
+        long length = msgIn.getLong(Commands.LENGTH);
+        String md5 = fileDescriptor.getString(Commands.MD5);
 
         String content = "";
         String message = "";
@@ -193,8 +193,8 @@ public class CommandProcessor {
         Document fileDescriptor = msgIn.getDocument(Commands.FILE_DESCRIPTOR);
         String pathName = msgIn.getString(Commands.PATH_NAME);
         String content = msgIn.getString(Commands.CONTENT);
-        long position = msgIn.getLong("position");
-        long length = msgIn.getLong("length");
+        long position = msgIn.getLong(Commands.POSITION);
+        long length = msgIn.getLong(Commands.LENGTH);
         long fileSize = fileDescriptor.getLong(Commands.FILE_SIZE);
 
         ByteBuffer contentBB;
