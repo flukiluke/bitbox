@@ -41,7 +41,6 @@ public class SyncTimer extends TimerTask {
      */
     @Override
     public void run() {
-        System.out.println("Generating sync events");
         fileSystemManager.generateSyncEvents().forEach(server::processFileSystemEvent);
     }
 }
