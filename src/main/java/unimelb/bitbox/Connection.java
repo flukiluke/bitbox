@@ -64,8 +64,8 @@ public class Connection extends Thread {
         log.info("Start new IO thread for incoming peer at " + clientSocket.getInetAddress());
         this.server = server;
         this.clientSocket = clientSocket;
-        this.commandProcessor = new CommandProcessor(fileSystemManager);
         initialise();
+        setFileSystemManager(fileSystemManager);
     }
 
     /**
@@ -93,7 +93,6 @@ public class Connection extends Thread {
             return;
         }
         initialised = true;
-        start();
         // Everything up to here is synchronous with the constructor's caller
     }
 
@@ -126,7 +125,7 @@ public class Connection extends Thread {
     private void sendMessageToPeer(Document message) throws IOException {
         outStream.write(message.toJson() + "\n");
         outStream.flush();
-        log.info("Sent message to peer: " + message);
+        //log.info("Sent message to peer: " + message);
     }
 
     /**
@@ -141,7 +140,7 @@ public class Connection extends Thread {
             throw new IOException();
         }
         Document doc = Document.parse(input);
-        log.info("Received message from peer: " + doc);
+        //log.info("Received message from peer: " + doc);
         return doc;
     }
 
@@ -275,7 +274,15 @@ public class Connection extends Thread {
         }
     }
 
+    /**
+     * Set the file system manager instance, use it to create a command processor
+     * and start the thread if we are sufficiently initialised.
+     * @param fileSystemManager An instance of the file system manager
+     */
     public void setFileSystemManager (FileSystemManager fileSystemManager) {
         this.commandProcessor = new CommandProcessor(fileSystemManager);
+        if (initialised) {
+            start();
+        }
     }
 }
