@@ -34,7 +34,7 @@ public class Peer
         Configuration.getConfiguration();
         Configuration.parseCmdLineArgs(args);
 
-        String[] peers = Configuration.getConfigurationValue("peers").split(" ");
+        String[] peers = Configuration.getConfigurationValue("peers").split(",");
         for(String peer : peers) {
             knownPeers.add(new HostPort(peer));
         }
