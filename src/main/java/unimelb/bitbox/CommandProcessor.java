@@ -93,6 +93,11 @@ public class CommandProcessor {
             try {
                 boolean status = fileSystemManager.createFileLoader(pathName, md5, fileSize, lastModified);
                 if (status) {
+                    if(fileSystemManager.checkShortcut(pathName)) {
+                        fileRelatedReply(Commands.FILE_CREATE_RESPONSE, fileDescriptor, pathName,
+                                true, "transfer complete using local data");
+                        return;
+                    }
                     fileRelatedReply(Commands.FILE_CREATE_RESPONSE, fileDescriptor, pathName,
                             true, "file loader ready");
                     requestBytes(fileDescriptor, pathName, 0, fileSize);
@@ -134,6 +139,11 @@ public class CommandProcessor {
             try {
                 boolean status = fileSystemManager.modifyFileLoader(pathName, md5, lastModified);
                 if (status) {
+                    if(fileSystemManager.checkShortcut(pathName)) {
+                        fileRelatedReply(Commands.FILE_MODIFY_RESPONSE, fileDescriptor, pathName,
+                                true, "transfer complete using local data");
+                        return;
+                    }
                     fileRelatedReply(Commands.FILE_MODIFY_RESPONSE, fileDescriptor, pathName,
                             true, "file loader ready");
                     requestBytes(fileDescriptor, pathName, 0, fileSize);
@@ -142,6 +152,9 @@ public class CommandProcessor {
                 message = "file loader creation unsuccessful";
             } catch (IOException e) {
                 message = "file loader creation unsuccessful: file system exception";
+            } catch (NoSuchAlgorithmException e) {
+                log.severe("Missing hashing algorithm: " + e.getLocalizedMessage());
+                System.exit(1);
             }
         }
         fileRelatedReply(Commands.FILE_MODIFY_RESPONSE, fileDescriptor, pathName,

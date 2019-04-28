@@ -44,7 +44,7 @@ public class Commands {
     public final static String CONTENT = "content";
     public final static String HOST_PORT = "hostPort";
     public final static String HOST = "host";
-    public final static String PORT = "post";
+    public final static String PORT = "port";
     public final static String PEERS = "peers";
 
 }
