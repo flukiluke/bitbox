@@ -39,6 +39,9 @@ public class ServerMain implements FileSystemObserver {
 		for (Connection connection : connections) {
             connection.setFileSystemManager(fileSystemManager);
         }
+
+		SyncTimer.startEvents(this, fileSystemManager);
+
 		listenForNewConnections();
 	}
 
