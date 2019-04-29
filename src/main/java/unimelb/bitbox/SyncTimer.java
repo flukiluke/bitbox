@@ -2,10 +2,8 @@ package unimelb.bitbox;
 
 import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.FileSystemManager;
-import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
 import unimelb.bitbox.util.FileSystemObserver;
 
-import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -37,7 +35,7 @@ public class SyncTimer extends TimerTask {
     }
 
     /**
-     * The task to be periodically exectuted. Query file system manager then send each event to serverMain.
+     * The task to be periodically executed. Query file system manager then send each event to serverMain.
      */
     @Override
     public void run() {

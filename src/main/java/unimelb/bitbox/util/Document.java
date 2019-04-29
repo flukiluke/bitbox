@@ -1,6 +1,7 @@
 package unimelb.bitbox.util;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -144,17 +145,18 @@ public class Document {
         return val;
     }
 
-	private ArrayList<Object> getList(JSONArray o){
-		ArrayList<Object> list = new ArrayList<Object>();
-		for(Object l : (JSONArray)o){
-			if(l instanceof JSONObject){
-				list.add(new Document((JSONObject) l));
-			} else if(l instanceof JSONArray){
-				list.add(getList((JSONArray) l));
-			} else {
-				list.add(l);
-			}
-		}
-		return list;
-	}
+    public List<Document> getListOfDocuments(String key) throws BadMessageException {
+	    JSONArray array;
+	    ArrayList<Document> list = new ArrayList<>();
+	    try {
+	        array = (JSONArray) obj.get(key);
+	        for (Object o : array) {
+	            list.add(new Document((JSONObject) o));
+            }
+        }
+	    catch (ClassCastException e) {
+	        throw new BadMessageException("No array of objects field " + key);
+        }
+	    return list;
+    }
 }

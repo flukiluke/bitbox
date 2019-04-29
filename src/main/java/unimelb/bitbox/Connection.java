@@ -48,7 +48,7 @@ public class Connection extends Thread {
         try {
             clientSocket = new Socket(address, port);
         } catch (IOException e) {
-            log.severe("Socket creation failed, IO thread exiting");
+            log.severe("Socket creation failed, IO thread for " + address + " exiting");
             return;
         }
         initialise();
@@ -83,10 +83,12 @@ public class Connection extends Thread {
             }
             if(!success) {
                 // Connection will be reaped eventually because initialised == false
+                log.severe("Did not connect to " + clientSocket.getInetAddress() + ":" + clientSocket.getPort());
                 return;
             }
         } catch (IOException e) {
-            log.severe("Setting up new peer connection failed, IO thread exiting");
+            log.severe("Setting up new peer connection failed, IO thread for "
+                    + clientSocket.getInetAddress() + " exiting");
             return;
         } catch (BadMessageException e) {
             terminateConnection(e.getMessage());
@@ -158,11 +160,11 @@ public class Connection extends Thread {
 
         Document reply = receiveMessageFromPeer();
         if (reply.getString(Commands.COMMAND).equals(Commands.CONNECTION_REFUSED)) {
-            //Peer.discoveredPeers((ArrayList)reply.getList(Commands.PEERS));
+            Peer.discoveredPeers(reply.getListOfDocuments(Commands.PEERS));
             return false;
         } else if (!reply.getString(Commands.COMMAND).equals(Commands.HANDSHAKE_RESPONSE)) {
-            throw new BadMessageException("Peer did not respond with handshake response, responded with "
-                    + reply.getString(Commands.COMMAND));
+            throw new BadMessageException("Peer " + clientSocket.getInetAddress() + " did not respond with handshake " +
+                    "response, responded with " + reply.getString(Commands.COMMAND));
         }
         remoteHostPort = new HostPort(reply.getDocument(Commands.HOST_PORT));
         return true;
@@ -177,7 +179,7 @@ public class Connection extends Thread {
     private boolean receiveHandshake() throws IOException, BadMessageException {
         Document request = receiveMessageFromPeer();
         if (!request.getString(Commands.COMMAND).equals(Commands.HANDSHAKE_REQUEST)) {
-            throw new BadMessageException("Peer did not open with handshake request");
+            throw new BadMessageException("Peer " + clientSocket.getInetAddress() + " did not open with handshake request");
         }
         remoteHostPort = new HostPort(request.getDocument(Commands.HOST_PORT));
         if (server.countIncomingConnections() >=
@@ -261,7 +263,7 @@ public class Connection extends Thread {
      * @param errorMessage Human-readable explanation of why they are being disconnected
      */
     private void terminateConnection(String errorMessage) {
-        log.severe("Peer sent invalid message, terminating connection with prejudice");
+        log.severe("Peer " + clientSocket.getInetAddress() + " sent invalid message, terminating connection with prejudice");
         Document doc = new Document();
         doc.append(Commands.COMMAND, Commands.INVALID_PROTOCOL);
         doc.append(Commands.MESSAGE, errorMessage);

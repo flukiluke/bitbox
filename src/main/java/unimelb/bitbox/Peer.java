@@ -20,9 +20,12 @@ import unimelb.bitbox.util.HostPort;
  */
 public class Peer 
 {
-	private static Logger log = Logger.getLogger(Peer.class.getName());
+    // Maximum number of CONNECTION_REFUSED redirects to follow before giving up (prevents cycles)
+    private static final int CONNECTION_ITERATIONS = 10;
+    private static Logger log = Logger.getLogger(Peer.class.getName());
 	private static List<Connection> connections = Collections.synchronizedList(new ArrayList<>());
 	private static List<HostPort> knownPeers = new ArrayList<>();
+	private static List<HostPort> newPeers = new ArrayList<>();
 	
     public static void main( String[] args ) throws IOException, NumberFormatException, NoSuchAlgorithmException
     {
@@ -38,9 +41,18 @@ public class Peer
         for(String peer : peers) {
             knownPeers.add(new HostPort(peer));
         }
-        
-        establishInitialConnections();
-        
+
+        for (int i = 0; i < CONNECTION_ITERATIONS; i++) {
+            establishInitialConnections();
+            if (newPeers.size() > 0) {
+                knownPeers = newPeers;
+                newPeers = new ArrayList<>();
+            }
+            else {
+                knownPeers = new ArrayList<>();
+            }
+        }
+
         new ServerMain(connections);
         
     }
@@ -59,11 +71,11 @@ public class Peer
      * To be called when a peer refused our connection so we can try connecting to others.
      * @param peers List of peers we are suggested to try.
      */
-    public static void discoveredPeers(List<Document> peers) {
+    public static void discoveredPeers(List<Document> peers) throws BadMessageException {
         for (Document doc : peers) {
-            System.out.println("Added " + doc + " to knownHosts");
-            /* TODO: Add to knownPeers and make sure iteration in
-               establishInitialConnections works properly */
+            HostPort hp = new HostPort(doc.getString(Commands.HOST), (int) doc.getLong(Commands.PORT));
+            log.info("Will try suggested peer at " + hp);
+            newPeers.add(hp);
         }
     }
 }

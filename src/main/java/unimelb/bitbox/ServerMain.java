@@ -72,6 +72,9 @@ public class ServerMain implements FileSystemObserver {
     public void processFileSystemEvent(FileSystemEvent fileSystemEvent) {
         synchronized (connections) {
             for (Connection connection : connections) {
+                if (!connection.initialised) {
+                    continue;
+                }
                 try {
                     // send a request involving a file
                     if (isFileEvent(fileSystemEvent.event)) {
