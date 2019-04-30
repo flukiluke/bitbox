@@ -45,7 +45,8 @@ public class Configuration {
         try (InputStream inputStream = new FileInputStream(CONFIGURATION_FILE)) {
             properties.load(inputStream);
         } catch (IOException e) {
-            log.warning("Could not read file " + CONFIGURATION_FILE);
+            log.severe("Could not read file " + CONFIGURATION_FILE);
+            System.exit(1);
         }
     }
 
