@@ -255,8 +255,8 @@ public class CommandProcessor {
         String message = "";
         boolean status = false;
 
-        //TODO do we need to reject requests if the length < blockSize? doesn't say so in the spec.
         try {
+            // If peer requests bytes that don't exist we will return an unsuccessful read
             ByteBuffer contentBB = fileSystemManager.readFile(md5, position, length);
             if (contentBB != null) {
                 content = Base64.getEncoder().encodeToString(contentBB.array());
@@ -272,7 +272,6 @@ public class CommandProcessor {
             System.exit(1);
         }
 
-        //TODO update length to reflect actual size of returned content
         returnBytes(fileDescriptor, pathName, position, length,
                 content, message, status);
     }
