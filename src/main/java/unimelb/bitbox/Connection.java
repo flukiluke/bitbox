@@ -131,8 +131,10 @@ public class Connection extends Thread {
      * @throws IOException If communication fails.
      */
     private void sendMessageToPeer(Document message) throws IOException {
-        outStream.write(message.toJson() + "\n");
-        outStream.flush();
+        synchronized (outStream) {
+            outStream.write(message.toJson() + "\n");
+            outStream.flush();
+        }
         //log.info("Sent message to peer: " + message);
     }
 
@@ -143,7 +145,10 @@ public class Connection extends Thread {
      * @throws BadMessageException If the message is not well-formed.
      */
     private Document receiveMessageFromPeer() throws BadMessageException, IOException {
-        String input = inStream.readLine();
+        String input;
+        synchronized (inStream) {
+            input = inStream.readLine();
+        }
         if (input == null) {
             throw new IOException();
         }

@@ -64,11 +64,12 @@ public class ServerMain implements FileSystemObserver {
     }
 
     /**
-     * Sends a request based on the event that occurred
+     * Sends a request based on the event that occurred. synchronization prevents the sync timer and filesystem manager
+     * from both entering the method at the same time.
      * @param fileSystemEvent the event that occurred
      */
     @Override
-    public void processFileSystemEvent(FileSystemEvent fileSystemEvent) {
+    public synchronized void processFileSystemEvent(FileSystemEvent fileSystemEvent) {
         synchronized (connections) {
             for (Connection connection : connections) {
                 if (!connection.initialised) {
