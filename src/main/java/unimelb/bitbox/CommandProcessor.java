@@ -65,6 +65,13 @@ public class CommandProcessor {
             case Commands.FILE_BYTES_RESPONSE:
                 fileBytesResponse(msgIn);
                 break;
+
+            /*
+             * What about other responses from the peer? We don't bother handling them because we
+             * don't care about their contents. Furthermore, it is not a problem for us if a peer send a response
+             * without us having issued a request - we will be polite and not terminate the connection with
+             * INVALID_PROTOCOL in an attempt to ensure good support for peers written by other people.
+             */
         }
         return this.responses;
     }
