@@ -107,6 +107,12 @@ public class Connection extends Thread {
             while (!interrupted()) {
                 ArrayList<Document> msgOut;
                 Document msgIn = receiveMessageFromPeer();
+                if (msgIn.getString(Commands.COMMAND).equals(Commands.INVALID_PROTOCOL)) {
+                    // That's unfortunate
+                    log.severe("Peer reckons we sent an invalid message. Disconnecting from " + clientSocket.getInetAddress());
+                    clientSocket.close();
+                    return;
+                }
                 msgOut = commandProcessor.handleMessage(msgIn);
                 for (Document msg : msgOut) {
                     sendMessageToPeer(msg);
