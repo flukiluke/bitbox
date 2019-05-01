@@ -290,6 +290,7 @@ public class Connection extends Thread {
     public void setFileSystemManager (FileSystemManager fileSystemManager) {
         this.commandProcessor = new CommandProcessor(fileSystemManager);
         if (initialised) {
+            this.setDaemon(true);
             start();
         }
     }

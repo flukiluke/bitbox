@@ -231,6 +231,7 @@ public class FileSystemManager extends Thread {
         log.info("monitoring "+cannonicalRoot);
         scanDirectoryTree(root);
         log.info("starting file system monitor thread");
+        this.setDaemon(true);
         start();
     }
 
