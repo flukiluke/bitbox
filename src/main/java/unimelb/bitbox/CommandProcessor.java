@@ -295,8 +295,11 @@ public class CommandProcessor {
         ByteBuffer contentBB;
         try {
             byte[] contentBytes = Base64.getDecoder().decode(content);
-            // TODO handle exception if we the peer gives us the wrong length! or calculate our own length?
-            // Also what if length > MAX_INT?
+            if (contentBytes.length != length) {
+                // The peer has misreported how much data it returned. Handle gracefully.
+                length = contentBytes.length;
+                log.warning("Peer misreported content length, correcting.");
+            }
             contentBB = ByteBuffer.allocate((int)length);
             contentBB.put(contentBytes);
             contentBB.position(0);
