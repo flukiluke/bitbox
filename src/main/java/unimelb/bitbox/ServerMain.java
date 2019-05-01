@@ -57,7 +57,6 @@ public class ServerMain implements FileSystemObserver {
             log.info("Waiting for peer connection");
             Socket clientSocket = serverSocket.accept();
             Connection connection = new Connection(this, clientSocket, fileSystemManager);
-            // TODO restrict the maximum number of connections
             connections.add(connection);
             reapConnections();
             showConnections();

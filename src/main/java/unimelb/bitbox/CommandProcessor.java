@@ -286,6 +286,8 @@ public class CommandProcessor {
         if (!status) {
             log.warning("Peer read for file " + msgIn.getString(Commands.PATH_NAME) + " failed: "
                     + msgIn.getString(Commands.MESSAGE));
+            return;
+            // A more robust error handling system would retry the request here
         }
 
         Document fileDescriptor = msgIn.getDocument(Commands.FILE_DESCRIPTOR);
@@ -328,7 +330,6 @@ public class CommandProcessor {
             log.severe("Missing hashing algorithm: " + e.getLocalizedMessage());
             System.exit(1);
         } catch (IOException e) {
-            // TODO Consider better recovery strategies (failure transparancy?)
             log.severe("I/O error while writing bytes for " + pathName);
             try {
                 fileSystemManager.cancelFileLoader(pathName);
