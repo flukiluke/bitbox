@@ -283,7 +283,10 @@ public class CommandProcessor {
      */
     private void fileBytesResponse(Document msgIn) throws BadMessageException {
         boolean status = msgIn.getBoolean(Commands.STATUS);
-        if (!status) return;
+        if (!status) {
+            log.warning("Peer read for file " + msgIn.getString(Commands.PATH_NAME) + " failed: "
+                    + msgIn.getString(Commands.MESSAGE));
+        }
 
         Document fileDescriptor = msgIn.getDocument(Commands.FILE_DESCRIPTOR);
         String pathName = msgIn.getString(Commands.PATH_NAME);
