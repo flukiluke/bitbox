@@ -41,7 +41,7 @@ public class Peer
             knownPeers.add(new HostPort(peer));
         }
 
-        Server server = new Server();
+        Server server = new TCPServer();
 
         for (int i = 0; i < CONNECTION_ITERATIONS; i++) {
             establishInitialConnections(server);
@@ -63,7 +63,7 @@ public class Peer
      */
     private static void establishInitialConnections(Server server) {
 		for(HostPort peer : knownPeers) {
-			Connection connection = new Connection(server, new InetSocketAddress(peer.host, peer.port));
+			Connection connection = new TCPConnection(server, new InetSocketAddress(peer.host, peer.port));
 			server.registerConnection(connection);
 	    }
 	}

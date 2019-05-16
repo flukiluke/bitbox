@@ -1,16 +1,12 @@
 package unimelb.bitbox;
 
 import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.FileSystemManager;
 import unimelb.bitbox.util.FileSystemObserver;
@@ -22,43 +18,20 @@ import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
  *
  * @author TransfictionRailways
  */
-public class Server implements FileSystemObserver {
-	private static Logger log = Logger.getLogger(Server.class.getName());
-    private List<Connection> connections = Collections.synchronizedList(new ArrayList<>());
+public abstract class Server implements FileSystemObserver {
+	protected static Logger log = Logger.getLogger(Server.class.getName());
+    protected List<Connection> connections = Collections.synchronizedList(new ArrayList<>());
     public FileSystemManager fileSystemManager;
-
-    /**
-     * Create server thread with a list of already-established connections
-     * @throws NumberFormatException
-     * @throws NoSuchAlgorithmException
-     * @throws IOException
-     */
-    public Server() throws NumberFormatException, NoSuchAlgorithmException, IOException {
-        fileSystemManager = new FileSystemManager(Configuration.getConfigurationValue("path"), this);
-    }
 
     public void registerConnection(Connection connection) {
         connections.add(connection);
     }
 
     /**
-     * Main loop for server thread. accept() an incoming connection and spawn a new IO thread to handle it.
+     * Main loop for server.
      * @throws IOException
      */
-    public void run() throws IOException {
-        ServerSocket serverSocket = new ServerSocket(Integer.parseInt(Configuration.getConfigurationValue(Commands.PORT)));
-        reapConnections();
-        showConnections();
-        SyncTimer.startEvents(this, fileSystemManager);
-        while (true) {
-            log.info("Waiting for peer connection");
-            Socket clientSocket = serverSocket.accept();
-            Connection connection = new Connection(this, clientSocket);
-            connections.add(connection);
-            reapConnections();
-            showConnections();
-        }
-    }
+    public abstract void run() throws IOException;
 
     /**
      * Sends a request based on the event that occurred. synchronization prevents the sync timer and filesystem manager
@@ -144,7 +117,7 @@ public class Server implements FileSystemObserver {
     /**
      * Remove connection IO threads that are no long active
      */
-    private void reapConnections() {
+    protected void reapConnections() {
         // Note: c.initialised is set to true in the synchronous phase of a connection's lifecycle
         // so any threads with it false never completed their initialisation properly.
 	    connections.removeIf(c -> !c.initialised || c.getState() == Thread.State.TERMINATED);
@@ -153,7 +126,7 @@ public class Server implements FileSystemObserver {
     /**
      * Dump the connections list for debugging purposes
      */
-    private void showConnections() {
+    protected void showConnections() {
 	    log.info("Connection list:");
 	    synchronized (connections) {
             for (Connection con : connections) {
