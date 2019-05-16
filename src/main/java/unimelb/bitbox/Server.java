@@ -22,8 +22,8 @@ import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
  *
  * @author TransfictionRailways
  */
-public class ServerMain implements FileSystemObserver {
-	private static Logger log = Logger.getLogger(ServerMain.class.getName());
+public class Server implements FileSystemObserver {
+	private static Logger log = Logger.getLogger(Server.class.getName());
     private List<Connection> connections = Collections.synchronizedList(new ArrayList<>());
     public FileSystemManager fileSystemManager;
 
@@ -33,7 +33,7 @@ public class ServerMain implements FileSystemObserver {
      * @throws NoSuchAlgorithmException
      * @throws IOException
      */
-    public ServerMain() throws NumberFormatException, NoSuchAlgorithmException, IOException {
+    public Server() throws NumberFormatException, NoSuchAlgorithmException, IOException {
         fileSystemManager = new FileSystemManager(Configuration.getConfigurationValue("path"), this);
     }
 
@@ -45,7 +45,7 @@ public class ServerMain implements FileSystemObserver {
      * Main loop for server thread. accept() an incoming connection and spawn a new IO thread to handle it.
      * @throws IOException
      */
-    public void listenForNewConnections() throws IOException {
+    public void run() throws IOException {
         ServerSocket serverSocket = new ServerSocket(Integer.parseInt(Configuration.getConfigurationValue(Commands.PORT)));
         reapConnections();
         showConnections();

@@ -21,7 +21,7 @@ import java.util.logging.Logger;
 public class CommandProcessor {
     private FileSystemManager fileSystemManager;
     private ArrayList<Document> responses;
-    private static Logger log = Logger.getLogger(ServerMain.class.getName());
+    private static Logger log = Logger.getLogger(Server.class.getName());
 
 
     public CommandProcessor(FileSystemManager fileSystemManager) {

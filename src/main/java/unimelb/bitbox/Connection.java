@@ -25,12 +25,12 @@ import java.util.logging.Logger;
  * @author TransfictionRailways
  */
 public class Connection extends Thread {
-    private static Logger log = Logger.getLogger(ServerMain.class.getName());
+    private static Logger log = Logger.getLogger(Server.class.getName());
     private CommandProcessor commandProcessor;
     private Socket clientSocket;
     private BufferedWriter outStream;
     private BufferedReader inStream;
-    private ServerMain server;
+    private Server server;
     public HostPort remoteHostPort; // This is the address/port the peer tells us
     public InetSocketAddress remoteAddress; // The is the address/port the connection is actually coming from
     public boolean initialised = false;
@@ -44,7 +44,7 @@ public class Connection extends Thread {
      * @param server An instance of the main server object
      * @param remoteAddress The address/port target to connect to
      */
-    public Connection(ServerMain server, InetSocketAddress remoteAddress) {
+    public Connection(Server server, InetSocketAddress remoteAddress) {
         isIncomingConnection = false;
         this.remoteAddress = remoteAddress;
         log.info("Start new IO thread for outgoing peer at " + remoteAddress);
@@ -64,7 +64,7 @@ public class Connection extends Thread {
      *
      * @param clientSocket A socket from accept() connected to the peer
      */
-    public Connection(ServerMain server, Socket clientSocket) {
+    public Connection(Server server, Socket clientSocket) {
         isIncomingConnection = true;
         this.remoteAddress = new InetSocketAddress(clientSocket.getInetAddress(), clientSocket.getPort());
         log.info("Start new IO thread for incoming peer at " + this.remoteAddress);

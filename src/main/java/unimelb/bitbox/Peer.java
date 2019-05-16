@@ -41,7 +41,7 @@ public class Peer
             knownPeers.add(new HostPort(peer));
         }
 
-        ServerMain server = new ServerMain();
+        Server server = new Server();
 
         for (int i = 0; i < CONNECTION_ITERATIONS; i++) {
             establishInitialConnections(server);
@@ -54,14 +54,14 @@ public class Peer
             }
         }
 
-        server.listenForNewConnections();
+        server.run();
     }
 
     /**
      * Connect to peers defined in our configuration file
      * @param server Reference to the main server object
      */
-    private static void establishInitialConnections(ServerMain server) {
+    private static void establishInitialConnections(Server server) {
 		for(HostPort peer : knownPeers) {
 			Connection connection = new Connection(server, new InetSocketAddress(peer.host, peer.port));
 			server.registerConnection(connection);
