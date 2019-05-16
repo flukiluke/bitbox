@@ -5,6 +5,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -23,40 +24,36 @@ import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
  */
 public class ServerMain implements FileSystemObserver {
 	private static Logger log = Logger.getLogger(ServerMain.class.getName());
-	private List<Connection> connections;
-	private FileSystemManager fileSystemManager;
+    private List<Connection> connections = Collections.synchronizedList(new ArrayList<>());
+    public FileSystemManager fileSystemManager;
 
     /**
      * Create server thread with a list of already-established connections
-     * @param connections List of established outbound connections
      * @throws NumberFormatException
      * @throws NoSuchAlgorithmException
      * @throws IOException
      */
-    public ServerMain(List<Connection> connections) throws NumberFormatException, NoSuchAlgorithmException, IOException {
-		this.connections = connections;
-		fileSystemManager = new FileSystemManager(Configuration.getConfigurationValue("path"), this);
-		for (Connection connection : connections) {
-            connection.setFileSystemManager(fileSystemManager);
-        }
+    public ServerMain() throws NumberFormatException, NoSuchAlgorithmException, IOException {
+        fileSystemManager = new FileSystemManager(Configuration.getConfigurationValue("path"), this);
+    }
 
-		SyncTimer.startEvents(this, fileSystemManager);
-
-		listenForNewConnections();
-	}
+    public void registerConnection(Connection connection) {
+        connections.add(connection);
+    }
 
     /**
      * Main loop for server thread. accept() an incoming connection and spawn a new IO thread to handle it.
      * @throws IOException
      */
-    private void listenForNewConnections() throws IOException {
+    public void listenForNewConnections() throws IOException {
         ServerSocket serverSocket = new ServerSocket(Integer.parseInt(Configuration.getConfigurationValue(Commands.PORT)));
         reapConnections();
         showConnections();
+        SyncTimer.startEvents(this, fileSystemManager);
         while (true) {
             log.info("Waiting for peer connection");
             Socket clientSocket = serverSocket.accept();
-            Connection connection = new Connection(this, clientSocket, fileSystemManager);
+            Connection connection = new Connection(this, clientSocket);
             connections.add(connection);
             reapConnections();
             showConnections();

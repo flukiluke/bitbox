@@ -42,9 +42,11 @@ public class Connection extends Thread {
      * @param address A domain name or IP address to connect to
      * @param port Network port to connect on
      */
-    public Connection(String address, int port) {
+    public Connection(ServerMain server, String address, int port) {
         isIncomingConnection = false;
         log.info("Start new IO thread for outgoing peer at " + address + ":" + port);
+        this.server = server;
+        this.commandProcessor = new CommandProcessor(server.fileSystemManager);
         try {
             clientSocket = new Socket(address, port);
         } catch (IOException e) {
@@ -59,13 +61,13 @@ public class Connection extends Thread {
      *
      * @param clientSocket A socket from accept() connected to the peer
      */
-    public Connection(ServerMain server, Socket clientSocket, FileSystemManager fileSystemManager) {
+    public Connection(ServerMain server, Socket clientSocket) {
         isIncomingConnection = true;
         log.info("Start new IO thread for incoming peer at " + clientSocket.getInetAddress());
         this.server = server;
+        this.commandProcessor = new CommandProcessor(server.fileSystemManager);
         this.clientSocket = clientSocket;
         initialise();
-        setFileSystemManager(fileSystemManager);
     }
 
     /**
@@ -95,7 +97,9 @@ public class Connection extends Thread {
             return;
         }
         initialised = true;
+        this.setDaemon(true);
         // Everything up to here is synchronous with the constructor's caller
+        start();
     }
 
     /**
@@ -284,19 +288,6 @@ public class Connection extends Thread {
         }
         catch (IOException e) {
             // At this point just give up - connection is getting closed anyway
-        }
-    }
-
-    /**
-     * Set the file system manager instance, use it to create a command processor
-     * and start the thread if we are sufficiently initialised.
-     * @param fileSystemManager An instance of the file system manager
-     */
-    public void setFileSystemManager (FileSystemManager fileSystemManager) {
-        this.commandProcessor = new CommandProcessor(fileSystemManager);
-        if (initialised) {
-            this.setDaemon(true);
-            start();
         }
     }
 }

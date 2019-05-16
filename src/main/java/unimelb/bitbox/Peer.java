@@ -23,10 +23,9 @@ public class Peer
     // Maximum number of CONNECTION_REFUSED redirects to follow before giving up (prevents cycles)
     private static final int CONNECTION_ITERATIONS = 10;
     private static Logger log = Logger.getLogger(Peer.class.getName());
-	private static List<Connection> connections = Collections.synchronizedList(new ArrayList<>());
 	private static List<HostPort> knownPeers = new ArrayList<>();
 	private static List<HostPort> newPeers = new ArrayList<>();
-	
+
     public static void main( String[] args ) throws IOException, NumberFormatException, NoSuchAlgorithmException
     {
     	System.setProperty("java.util.logging.SimpleFormatter.format",
@@ -42,8 +41,10 @@ public class Peer
             knownPeers.add(new HostPort(peer));
         }
 
+        ServerMain server = new ServerMain();
+
         for (int i = 0; i < CONNECTION_ITERATIONS; i++) {
-            establishInitialConnections();
+            establishInitialConnections(server);
             if (newPeers.size() > 0) {
                 knownPeers = newPeers;
                 newPeers = new ArrayList<>();
@@ -53,17 +54,17 @@ public class Peer
             }
         }
 
-        new ServerMain(connections);
-        
+        server.listenForNewConnections();
     }
 
     /**
      * Connect to peers defined in our configuration file
+     * @param server Reference to the main server object
      */
-    private static void establishInitialConnections() {
+    private static void establishInitialConnections(ServerMain server) {
 		for(HostPort peer : knownPeers) {
-			Connection connection = new Connection(peer.host, peer.port);
-            connections.add(connection);
+			Connection connection = new Connection(server, peer.host, peer.port);
+			server.registerConnection(connection);
 	    }
 	}
 
