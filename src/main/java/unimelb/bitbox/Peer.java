@@ -1,15 +1,15 @@
 package unimelb.bitbox;
 
+import unimelb.bitbox.util.Configuration;
+import unimelb.bitbox.util.Document;
+import unimelb.bitbox.util.HostPort;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
-
-import unimelb.bitbox.util.Configuration;
-import unimelb.bitbox.util.Document;
-import unimelb.bitbox.util.HostPort;
 
 /**
  * Main class for the BitBox peer.
@@ -25,6 +25,7 @@ public class Peer
     private static Logger log = Logger.getLogger(Peer.class.getName());
 	private static List<HostPort> knownPeers = new ArrayList<>();
 	private static List<HostPort> newPeers = new ArrayList<>();
+	private static boolean udpMode;
 
     public static void main( String[] args ) throws IOException, NumberFormatException, NoSuchAlgorithmException
     {
@@ -41,7 +42,16 @@ public class Peer
             knownPeers.add(new HostPort(peer));
         }
 
-        Server server = new TCPServer();
+        Server server;
+
+        if (Configuration.getConfigurationValue("mode").equals("udp")) {
+            udpMode = true;
+            server = new UDPServer();
+        }
+        else {
+            udpMode = false;
+            server = new TCPServer();
+        }
 
         for (int i = 0; i < CONNECTION_ITERATIONS; i++) {
             establishInitialConnections(server);
@@ -62,8 +72,16 @@ public class Peer
      * @param server Reference to the main server object
      */
     private static void establishInitialConnections(Server server) {
-		for(HostPort peer : knownPeers) {
-			Connection connection = new TCPConnection(server, new InetSocketAddress(peer.host, peer.port));
+		Connection connection;
+		InetSocketAddress remoteAddress;
+        for(HostPort peer : knownPeers) {
+            remoteAddress = new InetSocketAddress(peer.host, peer.port);
+		    if (udpMode) {
+		        connection = new UDPConnection((UDPServer)server, remoteAddress, false);
+            }
+		    else {
+                connection = new TCPConnection((TCPServer)server, remoteAddress);
+            }
 			server.registerConnection(connection);
 	    }
 	}

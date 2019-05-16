@@ -9,6 +9,7 @@ import java.net.Socket;
 import java.security.NoSuchAlgorithmException;
 
 public class TCPServer extends Server {
+    ServerSocket serverSocket;
 
     /**
      * Create server thread with a list of already-established connections
@@ -18,6 +19,7 @@ public class TCPServer extends Server {
      */
     public TCPServer() throws NumberFormatException, NoSuchAlgorithmException, IOException {
         fileSystemManager = new FileSystemManager(Configuration.getConfigurationValue("path"), this);
+        serverSocket = new ServerSocket(Integer.parseInt(Configuration.getConfigurationValue(Commands.PORT)));
     }
 
     /**
@@ -25,7 +27,6 @@ public class TCPServer extends Server {
      * @throws IOException
      */
     public void run() throws IOException {
-        ServerSocket serverSocket = new ServerSocket(Integer.parseInt(Configuration.getConfigurationValue(Commands.PORT)));
         reapConnections();
         showConnections();
         SyncTimer.startEvents(this, fileSystemManager);

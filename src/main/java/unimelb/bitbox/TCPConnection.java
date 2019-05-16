@@ -20,7 +20,7 @@ public class TCPConnection extends Connection {
      * @param server An instance of the main server object
      * @param remoteAddress The address/port target to connect to
      */
-    public TCPConnection(Server server, InetSocketAddress remoteAddress) {
+    public TCPConnection(TCPServer server, InetSocketAddress remoteAddress) {
         isIncomingConnection = false;
         this.remoteAddress = remoteAddress;
         log.info("Start new IO thread for outgoing peer at " + remoteAddress);
@@ -40,7 +40,7 @@ public class TCPConnection extends Connection {
      *
      * @param clientSocket A socket from accept() connected to the peer
      */
-    public TCPConnection(Server server, Socket clientSocket) {
+    public TCPConnection(TCPServer server, Socket clientSocket) {
         isIncomingConnection = true;
         this.remoteAddress = new InetSocketAddress(clientSocket.getInetAddress(), clientSocket.getPort());
         log.info("Start new IO thread for incoming peer at " + this.remoteAddress);
