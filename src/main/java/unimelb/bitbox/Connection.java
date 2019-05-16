@@ -11,6 +11,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.logging.Logger;
@@ -30,7 +31,8 @@ public class Connection extends Thread {
     private BufferedWriter outStream;
     private BufferedReader inStream;
     private ServerMain server;
-    public HostPort remoteHostPort;
+    public HostPort remoteHostPort; // This is the address/port the peer tells us
+    public InetSocketAddress remoteAddress; // The is the address/port the connection is actually coming from
     public boolean initialised = false;
     public boolean isIncomingConnection;
 
@@ -39,18 +41,19 @@ public class Connection extends Thread {
      * the connection is established. Starts a new thread once connection is
      * established to handle communications.
      *
-     * @param address A domain name or IP address to connect to
-     * @param port Network port to connect on
+     * @param server An instance of the main server object
+     * @param remoteAddress The address/port target to connect to
      */
-    public Connection(ServerMain server, String address, int port) {
+    public Connection(ServerMain server, InetSocketAddress remoteAddress) {
         isIncomingConnection = false;
-        log.info("Start new IO thread for outgoing peer at " + address + ":" + port);
+        this.remoteAddress = remoteAddress;
+        log.info("Start new IO thread for outgoing peer at " + remoteAddress);
         this.server = server;
         this.commandProcessor = new CommandProcessor(server.fileSystemManager);
         try {
-            clientSocket = new Socket(address, port);
+            clientSocket = new Socket(remoteAddress.getAddress(), remoteAddress.getPort());
         } catch (IOException e) {
-            log.severe("Socket creation failed, IO thread for " + address + " exiting");
+            log.severe("Socket creation failed, IO thread for " + remoteAddress + " exiting");
             return;
         }
         initialise();
@@ -63,7 +66,8 @@ public class Connection extends Thread {
      */
     public Connection(ServerMain server, Socket clientSocket) {
         isIncomingConnection = true;
-        log.info("Start new IO thread for incoming peer at " + clientSocket.getInetAddress());
+        this.remoteAddress = new InetSocketAddress(clientSocket.getInetAddress(), clientSocket.getPort());
+        log.info("Start new IO thread for incoming peer at " + this.remoteAddress);
         this.server = server;
         this.commandProcessor = new CommandProcessor(server.fileSystemManager);
         this.clientSocket = clientSocket;
@@ -85,12 +89,12 @@ public class Connection extends Thread {
             }
             if(!success) {
                 // Connection will be reaped eventually because initialised == false
-                log.severe("Did not connect to " + clientSocket.getInetAddress() + ":" + clientSocket.getPort());
+                log.severe("Did not connect to " + this.remoteAddress);
                 return;
             }
         } catch (IOException e) {
             log.severe("Setting up new peer connection failed, IO thread for "
-                    + clientSocket.getInetAddress() + " exiting");
+                    + this.remoteAddress + " exiting");
             return;
         } catch (BadMessageException e) {
             terminateConnection(e.getMessage());
@@ -113,7 +117,7 @@ public class Connection extends Thread {
                 Document msgIn = receiveMessageFromPeer();
                 if (msgIn.getString(Commands.COMMAND).equals(Commands.INVALID_PROTOCOL)) {
                     // That's unfortunate
-                    log.severe("Peer reckons we sent an invalid message. Disconnecting from " + clientSocket.getInetAddress());
+                    log.severe("Peer reckons we sent an invalid message. Disconnecting from " + this.remoteAddress);
                     clientSocket.close();
                     return;
                 }
@@ -123,7 +127,7 @@ public class Connection extends Thread {
                 }
             }
         } catch (IOException e) {
-            log.severe("Communication to " + clientSocket.getInetAddress() + " failed, IO thread exiting");
+            log.severe("Communication to " + this.remoteAddress + " failed, IO thread exiting");
         } catch (BadMessageException e) {
             terminateConnection(e.getMessage());
         }
@@ -178,7 +182,7 @@ public class Connection extends Thread {
             Peer.discoveredPeers(reply.getListOfDocuments(Commands.PEERS));
             return false;
         } else if (!reply.getString(Commands.COMMAND).equals(Commands.HANDSHAKE_RESPONSE)) {
-            throw new BadMessageException("Peer " + clientSocket.getInetAddress() + " did not respond with handshake " +
+            throw new BadMessageException("Peer " + this.remoteAddress + " did not respond with handshake " +
                     "response, responded with " + reply.getString(Commands.COMMAND));
         }
         remoteHostPort = new HostPort(reply.getDocument(Commands.HOST_PORT));
@@ -194,7 +198,7 @@ public class Connection extends Thread {
     private boolean receiveHandshake() throws IOException, BadMessageException {
         Document request = receiveMessageFromPeer();
         if (!request.getString(Commands.COMMAND).equals(Commands.HANDSHAKE_REQUEST)) {
-            throw new BadMessageException("Peer " + clientSocket.getInetAddress() + " did not open with handshake request");
+            throw new BadMessageException("Peer " + this.remoteAddress + " did not open with handshake request");
         }
         remoteHostPort = new HostPort(request.getDocument(Commands.HOST_PORT));
         if (server.countIncomingConnections() >=
@@ -260,7 +264,7 @@ public class Connection extends Thread {
      * Send the CONNECTION_REFUSED message to a peer and disconnect.
      */
     private void refuseConnection() {
-        log.severe("Refusing connection from " + clientSocket.getInetAddress());
+        log.severe("Refusing connection from " + this.remoteAddress);
         Document msg = new Document();
         msg.append(Commands.COMMAND, Commands.CONNECTION_REFUSED);
         msg.append(Commands.MESSAGE, "Connection limit reached, go away");
@@ -278,7 +282,7 @@ public class Connection extends Thread {
      * @param errorMessage Human-readable explanation of why they are being disconnected
      */
     private void terminateConnection(String errorMessage) {
-        log.severe("Peer " + clientSocket.getInetAddress() + " sent invalid message, terminating connection with prejudice");
+        log.severe("Peer " + this.remoteAddress + " sent invalid message, terminating connection with prejudice");
         Document doc = new Document();
         doc.append(Commands.COMMAND, Commands.INVALID_PROTOCOL);
         doc.append(Commands.MESSAGE, errorMessage);

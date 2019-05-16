@@ -1,9 +1,9 @@
 package unimelb.bitbox;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -63,7 +63,7 @@ public class Peer
      */
     private static void establishInitialConnections(ServerMain server) {
 		for(HostPort peer : knownPeers) {
-			Connection connection = new Connection(server, peer.host, peer.port);
+			Connection connection = new Connection(server, new InetSocketAddress(peer.host, peer.port));
 			server.registerConnection(connection);
 	    }
 	}
