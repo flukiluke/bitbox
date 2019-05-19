@@ -24,13 +24,15 @@ public abstract class Connection extends Thread {
     protected Server server;
     public HostPort remoteHostPort; // This is the address/port the peer tells us
     public InetSocketAddress remoteAddress; // The is the address/port the connection is actually coming from
-    public boolean initialised = false;
     public boolean isIncomingConnection;
+
+    public enum ConnectionState { CONNECTING, CONNECTED, DONE }
+    public ConnectionState connectionState = ConnectionState.CONNECTING;
 
     /**
      * Perform the handshake with a newly-connected peer. Terminates the connection if it fails.
      */
-    protected abstract void initialise();
+    protected abstract boolean initialise();
 
     /**
      * Send message to peer.

@@ -30,9 +30,11 @@ public class TCPConnection extends Connection {
             clientSocket = new Socket(remoteAddress.getAddress(), remoteAddress.getPort());
         } catch (IOException e) {
             log.severe("Socket creation failed, IO thread for " + remoteAddress + " exiting");
+            connectionState = ConnectionState.DONE;
             return;
         }
-        initialise();
+        this.setDaemon(true);
+        start();
     }
 
     /**
@@ -47,7 +49,8 @@ public class TCPConnection extends Connection {
         this.server = server;
         this.commandProcessor = new CommandProcessor(server.fileSystemManager);
         this.clientSocket = clientSocket;
-        initialise();
+        this.setDaemon(true);
+        start();
     }
 
     /**
@@ -55,6 +58,11 @@ public class TCPConnection extends Connection {
      */
     @Override
     public void run() {
+        if (!initialise()) {
+            connectionState = ConnectionState.DONE;
+            return;
+        }
+        connectionState = ConnectionState.CONNECTED;
         try {
             while (!interrupted()) {
                 ArrayList<Document> msgOut;
@@ -63,6 +71,7 @@ public class TCPConnection extends Connection {
                     // That's unfortunate
                     log.severe("Peer reckons we sent an invalid message. Disconnecting from " + this.remoteAddress);
                     clientSocket.close();
+                    connectionState = ConnectionState.DONE;
                     return;
                 }
                 msgOut = commandProcessor.handleMessage(msgIn);
@@ -75,9 +84,10 @@ public class TCPConnection extends Connection {
         } catch (BadMessageException e) {
             terminateConnection(e.getMessage());
         }
+        connectionState = ConnectionState.DONE;
     }
 
-    protected void initialise() {
+    protected boolean initialise() {
         boolean success;
         try {
             outStream = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream(), "UTF-8"));
@@ -90,20 +100,17 @@ public class TCPConnection extends Connection {
             if(!success) {
                 // Connection will be reaped eventually because initialised == false
                 log.severe("Did not connect to " + this.remoteAddress);
-                return;
+                return false;
             }
         } catch (IOException e) {
             log.severe("Setting up new peer connection failed, IO thread for "
                     + this.remoteAddress + " exiting");
-            return;
+            return false;
         } catch (BadMessageException e) {
             terminateConnection(e.getMessage());
-            return;
+            return false;
         }
-        initialised = true;
-        this.setDaemon(true);
-        // Everything up to here is synchronous with the constructor's caller
-        start();
+        return true;
     }
 
     protected void closeConnection() {

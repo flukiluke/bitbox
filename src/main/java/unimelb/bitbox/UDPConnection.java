@@ -6,7 +6,6 @@ import unimelb.bitbox.util.Document;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -31,7 +30,7 @@ public class UDPConnection extends Connection {
     }
 
     @Override
-    protected void initialise() {
+    protected boolean initialise() {
         boolean success;
         try {
             if (isIncomingConnection) {
@@ -42,20 +41,20 @@ public class UDPConnection extends Connection {
             if(!success) {
                 // Connection will be reaped eventually because initialised == false
                 log.severe("Did not connect to " + this.remoteAddress);
-                return;
+                return false;
             }
         } catch (IOException e) {
             log.severe("Setting up new peer connection failed, IO thread for "
                     + this.remoteAddress + " exiting");
-            return;
+            return false;
         } catch (BadMessageException e) {
             terminateConnection(e.getMessage());
-            return;
+            return false;
         }
-        initialised = true;
         this.setDaemon(true);
         // Everything up to here is synchronous with the constructor's caller
         start();
+        return true;
     }
 
     @Override
@@ -73,8 +72,8 @@ public class UDPConnection extends Connection {
     public void addReceivedMessage(String message) {
         synchronized (incomingMessages) {
             incomingMessages.add(message);
-            incomingMessages.notify();
         }
+        incomingMessages.notify();
     }
 
     @Override

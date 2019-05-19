@@ -26,15 +26,12 @@ public class UDPServer extends Server {
         datagramSocket = new DatagramSocket(Integer.parseInt(Configuration.getConfigurationValue(Commands.PORT)));
     }
 
-    public void run() throws IOException {
-        reapConnections();
-        showConnections();
-        SyncTimer.startEvents(this, fileSystemManager);
-
+    public void mainLoop() throws IOException {
         // Protocol requires all messages fit inside this limit
         byte[] inBuffer = new byte[Configuration.getUDPBufferSize()];
         DatagramPacket packet = new DatagramPacket(inBuffer, inBuffer.length);
         while (true) {
+            log.info("Waiting for peer connection");
             datagramSocket.receive(packet);
             UDPConnection connection = findRelevantConnection(packet);
             if (connection == null) {
@@ -42,6 +39,7 @@ public class UDPServer extends Server {
                 connection = new UDPConnection(this,
                         new InetSocketAddress(packet.getAddress(), packet.getPort()),
                         true);
+                registerNewConnection(connection);
             }
             connection.addReceivedMessage(new String(packet.getData()));
         }

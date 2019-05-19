@@ -26,17 +26,12 @@ public class TCPServer extends Server {
      * Main loop for server thread. accept() an incoming connection and spawn a new IO thread to handle it.
      * @throws IOException
      */
-    public void run() throws IOException {
-        reapConnections();
-        showConnections();
-        SyncTimer.startEvents(this, fileSystemManager);
+    public void mainLoop() throws IOException {
         while (true) {
             log.info("Waiting for peer connection");
             Socket clientSocket = serverSocket.accept();
             Connection connection = new TCPConnection(this, clientSocket);
-            connections.add(connection);
-            reapConnections();
-            showConnections();
+            registerNewConnection(connection);
         }
     }
 

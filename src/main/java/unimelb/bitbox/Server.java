@@ -18,12 +18,13 @@ import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
  *
  * @author TransfictionRailways
  */
-public abstract class Server implements FileSystemObserver {
+public abstract class Server extends Thread implements FileSystemObserver {
 	protected static Logger log = Logger.getLogger(Server.class.getName());
     protected List<Connection> connections = Collections.synchronizedList(new ArrayList<>());
     public FileSystemManager fileSystemManager;
 
-    public void registerConnection(Connection connection) {
+    public void registerNewConnection(Connection connection) {
+        reapConnections();
         connections.add(connection);
     }
 
@@ -31,7 +32,17 @@ public abstract class Server implements FileSystemObserver {
      * Main loop for server.
      * @throws IOException
      */
-    public abstract void run() throws IOException;
+    public abstract void mainLoop() throws IOException;
+
+    public void run() {
+        SyncTimer.startEvents(this, fileSystemManager);
+        try {
+            mainLoop();
+        }
+        catch (IOException e) {
+            log.severe("Main server thread threw an exception, exiting: " + e.getMessage());
+        }
+    }
 
     /**
      * Sends a request based on the event that occurred. synchronization prevents the sync timer and filesystem manager
@@ -41,8 +52,9 @@ public abstract class Server implements FileSystemObserver {
     @Override
     public synchronized void processFileSystemEvent(FileSystemEvent fileSystemEvent) {
         synchronized (connections) {
+            reapConnections();
             for (Connection connection : connections) {
-                if (!connection.initialised) {
+                if (connection.connectionState != Connection.ConnectionState.CONNECTED) {
                     continue;
                 }
                 try {
@@ -63,7 +75,6 @@ public abstract class Server implements FileSystemObserver {
                 }
             }
         }
-        reapConnections();
     }
 
     /**
@@ -98,7 +109,9 @@ public abstract class Server implements FileSystemObserver {
      * @return Long >= 0
      */
     public long countIncomingConnections() {
-        return connections.stream().filter(c -> c.isIncomingConnection).count();
+        return connections.stream()
+                .filter(c -> c.isIncomingConnection && c.connectionState == Connection.ConnectionState.CONNECTED)
+                .count();
     }
 
     /**
@@ -118,9 +131,7 @@ public abstract class Server implements FileSystemObserver {
      * Remove connection IO threads that are no long active
      */
     protected void reapConnections() {
-        // Note: c.initialised is set to true in the synchronous phase of a connection's lifecycle
-        // so any threads with it false never completed their initialisation properly.
-	    connections.removeIf(c -> !c.initialised || c.getState() == Thread.State.TERMINATED);
+        connections.removeIf(c -> c.connectionState == Connection.ConnectionState.DONE);
     }
 
     /**
@@ -130,11 +141,7 @@ public abstract class Server implements FileSystemObserver {
 	    log.info("Connection list:");
 	    synchronized (connections) {
             for (Connection con : connections) {
-                if (con.remoteHostPort != null) {
-                    log.info(con.remoteHostPort.toString());
-                } else {
-                    log.info("<Unestablished or broken connection>");
-                }
+                log.info(String.format("%s at %s (%s)", con.remoteHostPort, con.remoteAddress, con.connectionState));
             }
         }
     }

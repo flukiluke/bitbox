@@ -30,8 +30,8 @@ public class Peer
     public static void main( String[] args ) throws IOException, NumberFormatException, NoSuchAlgorithmException
     {
     	System.setProperty("java.util.logging.SimpleFormatter.format",
-                "[%1$tc] %2$s %4$s: %5$s%n");
-                //"%5$s%n");
+                //"[%1$tc] %2$s %4$s: %5$s%n");
+                "%5$s%n");
         log.info("BitBox Peer starting...");
 
         Configuration.getConfiguration();
@@ -53,6 +53,8 @@ public class Peer
             server = new TCPServer();
         }
 
+        server.start();
+
         for (int i = 0; i < CONNECTION_ITERATIONS; i++) {
             establishInitialConnections(server);
             if (newPeers.size() > 0) {
@@ -64,7 +66,9 @@ public class Peer
             }
         }
 
-        server.run();
+        /* This main function returns once we've created initial connections.
+         * The program will not exit until the server thread finishes.
+         */
     }
 
     /**
@@ -82,7 +86,7 @@ public class Peer
 		    else {
                 connection = new TCPConnection((TCPServer)server, remoteAddress);
             }
-			server.registerConnection(connection);
+			server.registerNewConnection(connection);
 	    }
 	}
 
