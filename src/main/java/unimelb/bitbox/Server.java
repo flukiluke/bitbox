@@ -1,15 +1,14 @@
 package unimelb.bitbox;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-import unimelb.bitbox.util.Document;
-import unimelb.bitbox.util.FileSystemManager;
-import unimelb.bitbox.util.FileSystemObserver;
+import unimelb.bitbox.util.*;
 import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
 
 
@@ -41,6 +40,17 @@ public abstract class Server extends Thread implements FileSystemObserver {
         }
         catch (IOException e) {
             log.severe("Main server thread threw an exception, exiting: " + e.getMessage());
+        }
+    }
+
+    public void connectPeers(List<HostPort> peers) {
+        for (HostPort peer : peers) {
+            InetSocketAddress remoteAddress = new InetSocketAddress(peer.host, peer.port);
+            if (Peer.udpMode) {
+                new UDPConnection((UDPServer) this, remoteAddress, false);
+            } else {
+                new TCPConnection((TCPServer) this, remoteAddress);
+            }
         }
     }
 
@@ -123,6 +133,7 @@ public abstract class Server extends Thread implements FileSystemObserver {
      */
     public ArrayList<Document> getPeerHostPorts() {
         return (ArrayList<Document>)connections.stream()
+                .filter(c -> c.connectionState == Connection.ConnectionState.CONNECTED)
                 .map(c -> c.remoteHostPort.toDoc())
                 .filter(hp -> hp != null)
                 .collect(Collectors.toList());

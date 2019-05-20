@@ -8,6 +8,7 @@ import unimelb.bitbox.util.HostPort;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.logging.Logger;
 
 /**
@@ -69,7 +70,11 @@ public abstract class Connection extends Thread {
 
         Document reply = receiveMessageFromPeer();
         if (reply.getString(Commands.COMMAND).equals(Commands.CONNECTION_REFUSED)) {
-            Peer.discoveredPeers(reply.getListOfDocuments(Commands.PEERS));
+            ArrayList<HostPort> peers = new ArrayList<>();
+            for (Document peer : reply.getListOfDocuments(Commands.PEERS)) {
+                peers.add(new HostPort(peer.getString(Commands.HOST), (int) peer.getLong(Commands.PORT)));
+            }
+            server.connectPeers(peers);
             return false;
         } else if (!reply.getString(Commands.COMMAND).equals(Commands.HANDSHAKE_RESPONSE)) {
             throw new BadMessageException("Peer " + this.remoteAddress + " did not respond with handshake " +
