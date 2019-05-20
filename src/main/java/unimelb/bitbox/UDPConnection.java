@@ -24,9 +24,30 @@ public class UDPConnection extends Connection {
         this.server = server;
         this.remoteAddress = remoteAddress;
         this.isIncomingConnection = isIncomingConnection;
-        log.info("Start new IO thread for outgoing peer at " + remoteAddress);
+        log.info("Start new IO thread for peer at " + remoteAddress);
         this.commandProcessor = new CommandProcessor(server.fileSystemManager);
-        initialise();
+        this.setDaemon(true);
+        server.registerNewConnection(this);
+        start();
+    }
+
+    @Override
+    public void run() {
+        if (!initialise()) {
+            connectionState = ConnectionState.DONE;
+            return;
+        }
+        connectionState = ConnectionState.CONNECTED;
+        try {
+            while (!interrupted()) {
+                // Do stuff
+                Thread.sleep(1000);
+            }
+        }
+        catch (InterruptedException e) {
+            // Ignore
+        }
+        connectionState = ConnectionState.DONE;
     }
 
     @Override
@@ -39,7 +60,6 @@ public class UDPConnection extends Connection {
                 success = sendHandshake();
             }
             if(!success) {
-                // Connection will be reaped eventually because initialised == false
                 log.severe("Did not connect to " + this.remoteAddress);
                 return false;
             }
@@ -51,9 +71,6 @@ public class UDPConnection extends Connection {
             terminateConnection(e.getMessage());
             return false;
         }
-        this.setDaemon(true);
-        // Everything up to here is synchronous with the constructor's caller
-        start();
         return true;
     }
 
@@ -72,8 +89,8 @@ public class UDPConnection extends Connection {
     public void addReceivedMessage(String message) {
         synchronized (incomingMessages) {
             incomingMessages.add(message);
+            incomingMessages.notify();
         }
-        incomingMessages.notify();
     }
 
     @Override

@@ -52,6 +52,7 @@ public abstract class Server extends Thread implements FileSystemObserver {
     @Override
     public synchronized void processFileSystemEvent(FileSystemEvent fileSystemEvent) {
         synchronized (connections) {
+            showConnections();
             reapConnections();
             for (Connection connection : connections) {
                 if (connection.connectionState != Connection.ConnectionState.CONNECTED) {

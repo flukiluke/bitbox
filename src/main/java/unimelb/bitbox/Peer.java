@@ -76,17 +76,15 @@ public class Peer
      * @param server Reference to the main server object
      */
     private static void establishInitialConnections(Server server) {
-		Connection connection;
 		InetSocketAddress remoteAddress;
         for(HostPort peer : knownPeers) {
             remoteAddress = new InetSocketAddress(peer.host, peer.port);
 		    if (udpMode) {
-		        connection = new UDPConnection((UDPServer)server, remoteAddress, false);
+		        new UDPConnection((UDPServer)server, remoteAddress, false);
             }
 		    else {
-                connection = new TCPConnection((TCPServer)server, remoteAddress);
+                new TCPConnection((TCPServer)server, remoteAddress);
             }
-			server.registerNewConnection(connection);
 	    }
 	}
 

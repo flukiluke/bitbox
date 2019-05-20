@@ -34,6 +34,7 @@ public class TCPConnection extends Connection {
             return;
         }
         this.setDaemon(true);
+        server.registerNewConnection(this);
         start();
     }
 
@@ -98,7 +99,6 @@ public class TCPConnection extends Connection {
                 success = sendHandshake();
             }
             if(!success) {
-                // Connection will be reaped eventually because initialised == false
                 log.severe("Did not connect to " + this.remoteAddress);
                 return false;
             }
