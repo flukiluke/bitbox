@@ -57,6 +57,40 @@ public abstract class Connection extends Thread {
 
 
     /**
+     * Main loop for IO thread. Reads message from peer then sends responses.
+     */
+    @Override
+    public void run() {
+        if (!initialise()) {
+            connectionState = ConnectionState.DONE;
+            return;
+        }
+        connectionState = ConnectionState.CONNECTED;
+        try {
+            while (!interrupted()) {
+                ArrayList<Document> msgOut;
+                Document msgIn = receiveMessageFromPeer();
+                if (msgIn.getString(Commands.COMMAND).equals(Commands.INVALID_PROTOCOL)) {
+                    // That's unfortunate
+                    log.severe("Peer reckons we sent an invalid message. Disconnecting from " + this.remoteAddress);
+                    closeConnection();
+                    connectionState = ConnectionState.DONE;
+                    return;
+                }
+                msgOut = commandProcessor.handleMessage(msgIn);
+                for (Document msg : msgOut) {
+                    sendMessageToPeer(msg);
+                }
+            }
+        } catch (IOException e) {
+            log.severe("Communication to " + this.remoteAddress + " failed, IO thread exiting (" + e.getMessage() +")");
+        } catch (BadMessageException e) {
+            terminateConnection(e.getMessage());
+        }
+        connectionState = ConnectionState.DONE;
+    }
+
+    /**
      * Perform the handshake as the initiating party.
      * @return false if we got CONNECTION_REFUSED, true otherwise
      * @throws IOException If communication fails

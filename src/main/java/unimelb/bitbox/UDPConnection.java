@@ -6,11 +6,14 @@ import unimelb.bitbox.util.Document;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
 public class UDPConnection extends Connection {
     private List<String> incomingMessages = new LinkedList<>();
+    private List<Message> activeMessages = new ArrayList<>();
 
     /**
      * Handles both incoming and outgoing connections. It does not return until
@@ -29,25 +32,6 @@ public class UDPConnection extends Connection {
         this.setDaemon(true);
         server.registerNewConnection(this);
         start();
-    }
-
-    @Override
-    public void run() {
-        if (!initialise()) {
-            connectionState = ConnectionState.DONE;
-            return;
-        }
-        connectionState = ConnectionState.CONNECTED;
-        try {
-            while (!interrupted()) {
-                // Do stuff
-                Thread.sleep(1000);
-            }
-        }
-        catch (InterruptedException e) {
-            // Ignore
-        }
-        connectionState = ConnectionState.DONE;
     }
 
     @Override
@@ -75,15 +59,15 @@ public class UDPConnection extends Connection {
     }
 
     @Override
-    protected void sendMessageToPeer(Document message) throws IOException {
-        byte[] buffer = message.toJson().getBytes();
+    protected void sendMessageToPeer(Document doc) throws IOException {
+        byte[] buffer = doc.toJson().getBytes();
         if (buffer.length > Configuration.getUDPBufferSize()) {
             throw new IOException("Attempt to send overlong message");
         }
         DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
         packet.setSocketAddress(remoteAddress);
-        ((UDPServer)server).send(packet);
-        log.info("Sent message to peer: " + message);
+        activeMessages.add(new Message(doc, packet));
+        log.info("Sent message to peer: " + doc);
     }
 
     public void addReceivedMessage(String message) {
@@ -94,12 +78,13 @@ public class UDPConnection extends Connection {
     }
 
     @Override
-    protected Document receiveMessageFromPeer() throws BadMessageException {
+    protected Document receiveMessageFromPeer() throws BadMessageException, IOException {
         String input;
         try {
             synchronized (incomingMessages) {
                 while (incomingMessages.size() == 0) {
-                    incomingMessages.wait();
+                    incomingMessages.wait(200); // I just picked a number
+                    handleResends();
                 }
                 input = incomingMessages.remove(0);
             }
@@ -109,11 +94,72 @@ public class UDPConnection extends Connection {
         }
         Document doc = Document.parse(input);
         log.info("Received message from peer: " + doc);
+        // Normally I'd use Collection::removeIf but it seems to have trouble with checked exceptions
+        synchronized (activeMessages) {
+            for (Iterator<Message> iterator = activeMessages.listIterator(); iterator.hasNext(); ) {
+                Message m = iterator.next();
+                if (m.isMatchingResponse(doc)) {
+                    iterator.remove();
+                }
+            }
+        }
         return doc;
     }
 
     @Override
     protected void closeConnection() {
         // No need to do anything
+    }
+
+    private void handleResends() throws IOException {
+        synchronized (activeMessages) {
+            for (Message m : activeMessages) {
+                m.resendIfNeeded();
+            }
+        }
+    }
+
+    private class Message {
+        private Document request;
+        private DatagramPacket packet;
+        private int attemptNumber;
+        private long lastSendTime;
+
+
+        public Message(Document request, DatagramPacket packet) throws IOException {
+            this.request = request;
+            this.packet = packet;
+            this.attemptNumber = 1;
+            lastSendTime = System.currentTimeMillis();
+            ((UDPServer)server).send(packet);
+        }
+
+        public void resendIfNeeded() throws IOException {
+            if (lastSendTime > System.currentTimeMillis() - 1000) {
+                return;
+            }
+            if (attemptNumber++ > 5) {
+                throw new IOException("Message retry limit reached");
+            }
+            ((UDPServer) server).send(packet);
+            lastSendTime = System.currentTimeMillis();
+        }
+
+        public boolean isMatchingResponse(Document response) throws BadMessageException {
+            // Make sure the *_REQUEST matches the *_RESPONSE
+            String expectedResponseCommand = request.getString(Commands.COMMAND)
+                    .replace("_REQUEST", "_RESPONSE");
+            if (!expectedResponseCommand.equals(response.getString(Commands.COMMAND))) {
+                return false;
+            }
+            // Ignore some fields when comparing the content of messages
+            if (!request.matches(response, new String[]{Commands.COMMAND,
+                    Commands.STATUS,
+                    Commands.MESSAGE,
+                    Commands.HOST_PORT})) {
+                return false;
+            }
+            return true;
+        }
     }
 }

@@ -5,7 +5,6 @@ import unimelb.bitbox.util.Document;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.util.ArrayList;
 
 public class TCPConnection extends Connection {
     private Socket clientSocket;
@@ -52,40 +51,6 @@ public class TCPConnection extends Connection {
         this.clientSocket = clientSocket;
         this.setDaemon(true);
         start();
-    }
-
-    /**
-     * Main loop for IO thread. Reads message from peer then sends responses.
-     */
-    @Override
-    public void run() {
-        if (!initialise()) {
-            connectionState = ConnectionState.DONE;
-            return;
-        }
-        connectionState = ConnectionState.CONNECTED;
-        try {
-            while (!interrupted()) {
-                ArrayList<Document> msgOut;
-                Document msgIn = receiveMessageFromPeer();
-                if (msgIn.getString(Commands.COMMAND).equals(Commands.INVALID_PROTOCOL)) {
-                    // That's unfortunate
-                    log.severe("Peer reckons we sent an invalid message. Disconnecting from " + this.remoteAddress);
-                    clientSocket.close();
-                    connectionState = ConnectionState.DONE;
-                    return;
-                }
-                msgOut = commandProcessor.handleMessage(msgIn);
-                for (Document msg : msgOut) {
-                    sendMessageToPeer(msg);
-                }
-            }
-        } catch (IOException e) {
-            log.severe("Communication to " + this.remoteAddress + " failed, IO thread exiting");
-        } catch (BadMessageException e) {
-            terminateConnection(e.getMessage());
-        }
-        connectionState = ConnectionState.DONE;
     }
 
     protected boolean initialise() {

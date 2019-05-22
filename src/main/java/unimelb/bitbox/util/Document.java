@@ -1,7 +1,9 @@
 package unimelb.bitbox.util;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -23,7 +25,7 @@ import unimelb.bitbox.BadMessageException;
  */
 public class Document {
 	
-	protected JSONObject obj;
+	public JSONObject obj;
 	
 	public Document(){
 		obj=new JSONObject();
@@ -158,5 +160,19 @@ public class Document {
 	        throw new BadMessageException("No array of objects field " + key);
         }
 	    return list;
+    }
+
+    public boolean matches(Document other, String[] ignoredFields) {
+	    Set<String> ourFields = new HashSet<String>(obj.keySet());
+        Set<String> theirFields = new HashSet<String>(other.obj.keySet());
+	    for (String field : ignoredFields) {
+	        ourFields.remove(field);
+	        theirFields.remove(field);
+        }
+	    if (!ourFields.equals(theirFields)) {
+	        return false;
+        }
+	    // TODO: confirm that the fields actually have the same content
+        return true;
     }
 }
