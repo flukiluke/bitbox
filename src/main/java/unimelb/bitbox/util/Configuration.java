@@ -96,8 +96,7 @@ public class Configuration {
         }
     }
 
-    public static int getUDPBufferSize() {
-        // UDPBufferSize is limited to 8KB by the specification
-        return Math.min(8192, Integer.parseInt(Configuration.getConfigurationValue("blockSize")));
+    public static int getBlockSize() {
+        return Math.min(8192 / 3 - 300, Integer.parseInt(Configuration.getConfigurationValue("blockSize")));
     }
 }

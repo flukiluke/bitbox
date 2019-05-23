@@ -115,7 +115,7 @@ public class CommandProcessor {
                 log.severe("Missing hashing algorithm: " + e.getLocalizedMessage());
                 System.exit(1);
             } catch (IOException e) {
-                message = "file loader creation unsuccessful: file system exception";
+                message = "file loader creation unsuccessful: file system exception: " + e.getMessage();
             }
         }
         fileRelatedReply(Commands.FILE_CREATE_RESPONSE, fileDescriptor, pathName,
@@ -395,7 +395,7 @@ public class CommandProcessor {
         Document msg = new Document();
 
         // calculate length to request
-        long length = Long.parseLong(Configuration.getConfigurationValue("blockSize"));
+        long length = Configuration.getBlockSize();
         long remaining = fileSize - position;
         if (remaining < length) length = remaining;
 

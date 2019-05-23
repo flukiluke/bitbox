@@ -17,7 +17,7 @@ import unimelb.bitbox.BadMessageException;
  * Provides append() for building JSON and get*() methods for each type of data
  * to extract it, in general throwing BadMessageException when data is malformed or missing.
  *
- * Adapted from a class provided by the Aaron.
+ * Adapted from a class provided by Aaron.
  *
  * @author aaron
  * @author TransfictionRailways
@@ -25,7 +25,7 @@ import unimelb.bitbox.BadMessageException;
  */
 public class Document {
 	
-	public JSONObject obj;
+	private JSONObject obj;
 	
 	public Document(){
 		obj=new JSONObject();
@@ -98,6 +98,10 @@ public class Document {
 	public boolean containsKey(String key){
 		return obj.containsKey(key);
 	}
+
+	public Object get(String key) {
+	    return obj.get(key);
+    }
 	
 	public String getString(String key) throws BadMessageException {
 	    String val;
@@ -163,16 +167,15 @@ public class Document {
     }
 
     public boolean matches(Document other, String[] ignoredFields) {
-	    Set<String> ourFields = new HashSet<String>(obj.keySet());
-        Set<String> theirFields = new HashSet<String>(other.obj.keySet());
+	    Set<String> fields = new HashSet<String>(obj.keySet());
 	    for (String field : ignoredFields) {
-	        ourFields.remove(field);
-	        theirFields.remove(field);
+	        fields.remove(field);
         }
-	    if (!ourFields.equals(theirFields)) {
-	        return false;
+	    for (String field : fields) {
+	        if (!other.containsKey(field) || !obj.get(field).equals(other.get(field))) {
+	            return false;
+            }
         }
-	    // TODO: confirm that the fields actually have the same content
         return true;
     }
 }

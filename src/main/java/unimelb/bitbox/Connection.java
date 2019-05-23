@@ -63,6 +63,7 @@ public abstract class Connection extends Thread {
     public void run() {
         if (!initialise()) {
             connectionState = ConnectionState.DONE;
+            server.reapConnections();
             return;
         }
         connectionState = ConnectionState.CONNECTED;
@@ -88,6 +89,7 @@ public abstract class Connection extends Thread {
             terminateConnection(e.getMessage());
         }
         connectionState = ConnectionState.DONE;
+        server.reapConnections();
     }
 
     /**

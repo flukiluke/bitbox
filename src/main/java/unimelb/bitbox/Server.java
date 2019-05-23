@@ -63,7 +63,6 @@ public abstract class Server extends Thread implements FileSystemObserver {
     public synchronized void processFileSystemEvent(FileSystemEvent fileSystemEvent) {
         synchronized (connections) {
             showConnections();
-            reapConnections();
             for (Connection connection : connections) {
                 if (connection.connectionState != Connection.ConnectionState.CONNECTED) {
                     continue;
@@ -150,6 +149,9 @@ public abstract class Server extends Thread implements FileSystemObserver {
      * Dump the connections list for debugging purposes
      */
     protected void showConnections() {
+        if (connections.size() == 0) {
+            return;
+        }
 	    log.info("Connection list:");
 	    synchronized (connections) {
             for (Connection con : connections) {

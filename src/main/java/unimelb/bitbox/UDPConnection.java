@@ -6,14 +6,11 @@ import unimelb.bitbox.util.Document;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 public class UDPConnection extends Connection {
     private List<String> incomingMessages = new LinkedList<>();
-    private List<Message> activeMessages = new ArrayList<>();
+    private List<Message> activeMessages = Collections.synchronizedList(new ArrayList<>());
 
     /**
      * Handles both incoming and outgoing connections. It does not return until
@@ -61,12 +58,17 @@ public class UDPConnection extends Connection {
     @Override
     protected void sendMessageToPeer(Document doc) throws IOException {
         byte[] buffer = doc.toJson().getBytes();
-        if (buffer.length > Configuration.getUDPBufferSize()) {
-            throw new IOException("Attempt to send overlong message");
-        }
         DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
         packet.setSocketAddress(remoteAddress);
-        activeMessages.add(new Message(doc, packet));
+        Message message = new Message(doc, packet);
+        try {
+            if (doc.getString(Commands.COMMAND).contains("REQUEST")) {
+                activeMessages.add(message);
+            }
+        }
+        catch (BadMessageException e) {
+            // ignore
+        }
         log.info("Sent message to peer: " + doc);
     }
 
@@ -103,6 +105,7 @@ public class UDPConnection extends Connection {
                 }
             }
         }
+        log.info(activeMessages.size() + " in transit");
         return doc;
     }
 
@@ -156,6 +159,7 @@ public class UDPConnection extends Connection {
             if (!request.matches(response, new String[]{Commands.COMMAND,
                     Commands.STATUS,
                     Commands.MESSAGE,
+                    Commands.CONTENT,
                     Commands.HOST_PORT})) {
                 return false;
             }

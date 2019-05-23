@@ -28,7 +28,6 @@ public class TCPServer extends Server {
      */
     public void mainLoop() throws IOException {
         while (true) {
-            log.info("Waiting for peer connection");
             Socket clientSocket = serverSocket.accept();
             Connection connection = new TCPConnection(this, clientSocket);
             registerNewConnection(connection);

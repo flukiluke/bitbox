@@ -1,7 +1,6 @@
 package unimelb.bitbox;
 
 import unimelb.bitbox.util.Configuration;
-import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.FileSystemManager;
 
 import java.io.IOException;
@@ -27,12 +26,10 @@ public class UDPServer extends Server {
     }
 
     public void mainLoop() throws IOException {
-        // Protocol requires all messages fit inside this limit
-        byte[] inBuffer = new byte[Configuration.getUDPBufferSize()];
+        byte[] inBuffer = new byte[8192];
         DatagramPacket packet = new DatagramPacket(inBuffer, inBuffer.length);
         String message;
         while (true) {
-            log.info("Waiting for peer connection");
             datagramSocket.receive(packet);
             UDPConnection connection = findRelevantConnection(packet);
             if (connection == null) {
@@ -40,9 +37,8 @@ public class UDPServer extends Server {
                         new InetSocketAddress(packet.getAddress(), packet.getPort()),
                         true);
             }
-            message = new String(packet.getData());
-            System.out.println(message.substring(0, packet.getLength()));
-            connection.addReceivedMessage(message.substring(0, packet.getLength()));
+            message = new String(packet.getData(), 0, packet.getLength());
+            connection.addReceivedMessage(message);
         }
     }
 
