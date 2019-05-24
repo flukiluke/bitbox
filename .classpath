@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="src" path="src/main/java"/>
+	<classpathentry kind="lib" path="F:/Downloads/Mozilla/java-json.jar/java-json.jar"/>
+	<classpathentry kind="lib" path="F:/Downloads/Mozilla/json-simple-1.1.1.jar/json-simple-1.1.1.jar"/>
+	<classpathentry kind="lib" path="lib/args4j-2.33.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

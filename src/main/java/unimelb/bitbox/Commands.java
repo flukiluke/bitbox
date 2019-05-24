@@ -28,6 +28,9 @@ public class Commands {
     public final static String DIRECTORY_CREATE_RESPONSE = "DIRECTORY_CREATE_RESPONSE";
     public final static String DIRECTORY_DELETE_RESPONSE = "DIRECTORY_DELETE_RESPONSE";
     public final static String FILE_BYTES_RESPONSE = "FILE_BYTES_RESPONSE";
+    
+    public final static String AUTH_REQUEST = "AUTH_REQUEST";
+    public final static String AUTH_RESPONSE = "AUTH_RESPONSE";
 
 
     // list of fields
@@ -47,4 +50,5 @@ public class Commands {
     public final static String PORT = "port";
     public final static String PEERS = "peers";
     public static final String SYNC_INTERVAL = "syncInterval";
+    public static final String IDENTITY = "identity";
 }

@@ -9,11 +9,14 @@ import org.kohsuke.args4j.Option;
 //it will automatically update the field with the parsed argument value
 public class CmdLineArgs {
 
-	@Option(required = false, name = "-c", aliases = {"--command"}, usage = "Command")
-	private String command = "";
+	@Option(required = true, name = "-c", aliases = {"--command"}, usage = "Command")
+	private String command;
 	
-	@Option(required = false, name = "-p", usage = "Port number")
-	private String peer = "localhost:4444";
+	@Option(required = true, name = "-p", usage = "Port number")
+	private String peer;
+	
+	@Option(required = true, name = "-i", usage = "Idenity")
+	private String identity;
 	
 	@Option(required = false, name = "-s", usage = "Host Address")
 	private String server = "localhost:4444";
@@ -28,6 +31,10 @@ public class CmdLineArgs {
 
 	public String getPeer() {
 		return peer;
+	}
+	
+	public String getIdentity() {
+		return identity;
 	}
 	
 }

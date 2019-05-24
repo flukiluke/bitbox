@@ -13,6 +13,7 @@ public class ClientConnection extends Connection {
     private BufferedWriter outStream;
     private BufferedReader inStream;
     private Client client;
+    private CmdLineArgs clientCommand;
 
     /**
      * This constructor initiates a connection to a peer. It does not return until
@@ -25,6 +26,7 @@ public class ClientConnection extends Connection {
     public ClientConnection(InetSocketAddress remoteAddress, CmdLineArgs clientCommand) {
         isIncomingConnection = false;
         this.remoteAddress = remoteAddress;
+        this.clientCommand = clientCommand;
         log = Logger.getLogger(Client.class.getName());
         log.info("Start new IO thread for outgoing peer at " + remoteAddress);
         try {
@@ -54,8 +56,29 @@ public class ClientConnection extends Connection {
         start();
     }
 
-    //No handshake required for client commands
+   
     protected boolean initialise() {
+        boolean success;
+        try {
+            outStream = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream(), "UTF-8"));
+            inStream = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            if (isIncomingConnection) {
+                success = receiveAuthResponse();
+            } else {
+                success = sendAuthRequest(clientCommand);
+            }
+            if(!success) {
+                log.severe("Did not connect to " + this.remoteAddress);
+                return false;
+            }
+        } catch (IOException e) {
+            log.severe("Setting up new peer connection failed, IO thread for "
+                    + this.remoteAddress + " exiting");
+            return false;
+        } catch (BadMessageException e) {
+            terminateConnection(e.getMessage());
+            return false;
+        }
         return true;
     }
 
