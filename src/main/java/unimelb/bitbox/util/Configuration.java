@@ -10,6 +10,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Pattern;
+
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
+
 import java.util.regex.Matcher;
 import java.util.logging.Logger;
 
@@ -98,5 +102,38 @@ public class Configuration {
 
     public static int getBlockSize() {
         return Math.min(8192 / 3 - 300, Integer.parseInt(Configuration.getConfigurationValue("blockSize")));
+    }
+
+
+    /**Read command line and override any configuration values.
+     *
+     * @param args The args array passed to main()
+     * @return CmdLineArgs containing commands and required parameters for command
+     */
+    public static CmdLineArgs parseClientCmdLineArgs(String[] args) {
+ 		//Object that will store the parsed command line arguments
+ 		CmdLineArgs argsBean = new CmdLineArgs();
+ 		
+ 		//Parser provided by args4j
+ 		CmdLineParser parser = new CmdLineParser(argsBean);
+ 		try {
+ 			
+ 			//Parse the arguments
+ 			parser.parseArgument(args);
+ 			
+ 			//After parsing, the fields in argsBean have been updated with the given
+ 			//command line arguments
+ 			System.out.println("Server: " + argsBean.getServer());
+ 			System.out.println("Peer: " + argsBean.getPeer());
+ 			
+ 		} catch (CmdLineException e) {
+ 			
+ 			System.err.println(e.getMessage());
+ 			
+ 			//Print the usage to help the user understand the arguments expected
+ 			//by the program
+ 			parser.printUsage(System.err);
+ 		}
+ 		return argsBean;
     }
 }
