@@ -188,8 +188,27 @@ public abstract class Connection extends Thread {
             throw new BadMessageException("Client " + this.remoteAddress + " did not open with auth request");
         }
         Document reply = new Document();
-        reply.append(Commands.COMMAND, Commands.AUTH_RESPONSE);
-        reply.append(Commands.STATUS, false);
+        
+        Boolean foundKey = false;
+        for(String key : Configuration.getConfigurationValue("authorized_keys").split(",")){
+        	String publicKey = key.split(" ")[1];
+        	String identity = key.split(" ")[2];
+        	log.info("looking for: " + request.get("identity") + ", found: "+ identity);
+        	if(identity.equals(request.get("identity"))) {
+        		foundKey = true;
+        		break;
+        	}
+        }
+        
+        if(!foundKey) {
+	        reply.append(Commands.COMMAND, Commands.AUTH_RESPONSE);
+	        reply.append(Commands.STATUS, false);
+	        reply.append(Commands.MESSAGE, "public key not found");
+        }else {
+	        reply.append(Commands.COMMAND, Commands.AUTH_RESPONSE);
+	        reply.append(Commands.STATUS, true);
+	        reply.append(Commands.MESSAGE, "public key found");
+        }
         sendMessageToPeer(reply);
         return true;
     }
@@ -205,8 +224,27 @@ public abstract class Connection extends Thread {
             throw new BadMessageException("Client " + this.remoteAddress + " did not open with auth request");
         }
         Document reply = new Document();
-        reply.append(Commands.COMMAND, Commands.AUTH_RESPONSE);
-        reply.append(Commands.STATUS, false);
+        
+        Boolean foundKey = false;
+        for(String key : Configuration.getConfigurationValue("authorized_keys").split(",")){
+        	String publicKey = key.split(" ")[1];
+        	String identity = key.split(" ")[2];
+        	log.info("looking for: " + request.get("identity") + ", found: "+ identity);
+        	if(identity.equals(request.get("identity"))) {
+        		foundKey = true;
+        		break;
+        	}
+        }
+        
+        if(!foundKey) {
+	        reply.append(Commands.COMMAND, Commands.AUTH_RESPONSE);
+	        reply.append(Commands.STATUS, false);
+	        reply.append(Commands.MESSAGE, "public key not found");
+        }else {
+	        reply.append(Commands.COMMAND, Commands.AUTH_RESPONSE);
+	        reply.append(Commands.STATUS, true);
+	        reply.append(Commands.MESSAGE, "public key found");
+        }
         sendMessageToPeer(reply);
         return true;
     }

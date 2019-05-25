@@ -1,5 +1,6 @@
 package unimelb.bitbox;
 
+import unimelb.bitbox.Connection.ConnectionState;
 import unimelb.bitbox.util.CmdLineArgs;
 import unimelb.bitbox.util.Document;
 
@@ -7,6 +8,7 @@ import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 
 public class ClientConnection extends Connection {
     private Socket clientSocket;
@@ -56,6 +58,40 @@ public class ClientConnection extends Connection {
         this.setDaemon(true);
         start();
     }
+    
+
+    /**
+     * Main loop for IO thread. Reads message from peer then sends responses.
+     */
+    public void run() {
+        if (!initialise()) {
+            connectionState = ConnectionState.DONE;
+            return;
+        }
+        connectionState = ConnectionState.CONNECTED;
+        try {
+            while (!interrupted()) {
+                ArrayList<Document> msgOut;
+                Document msgIn = receiveMessageFromPeer();
+                if (msgIn.getString(Commands.COMMAND).equals(Commands.INVALID_PROTOCOL)) {
+                    // That's unfortunate
+                    log.severe("Peer reckons we sent an invalid message. Disconnecting from " + this.remoteAddress);
+                    closeConnection();
+                    connectionState = ConnectionState.DONE;
+                    return;
+                }
+                //msgOut = commandProcessor.handleMessage(msgIn);
+                //for (Document msg : msgOut) {
+                //    sendMessageToPeer(msg);
+               // }
+            }
+        } catch (IOException e) {
+            log.severe("Communication to " + this.remoteAddress + " failed, IO thread exiting (" + e.getMessage() +")");
+        } catch (BadMessageException e) {
+            terminateConnection(e.getMessage());
+        }
+        connectionState = ConnectionState.DONE;
+    }
 
     protected boolean initialise() {
         boolean success;
@@ -94,23 +130,19 @@ public class ClientConnection extends Connection {
             outStream.write(message.toJson() + "\n");
             outStream.flush();
         }
-        //log.info("Sent message to peer: " + message);
+        log.info("Sent message to peer: " + message);
     }
 
     protected Document receiveMessageFromPeer() throws BadMessageException, IOException {
         String input;
-    	log.info("HM 0- delete me");
         synchronized (inStream) {
-        	log.info("HM 1- delete me");
             input = inStream.readLine();
         }
         if (input == null) {
-        	log.info("HM - delete me");
             throw new IOException();
         }
-    	log.info("HM 2- delete me");
         Document doc = Document.parse(input);
-        //log.info("Received message from peer: " + doc);
+        log.info("Received message from peer: " + doc);
         return doc;
     }
 }
