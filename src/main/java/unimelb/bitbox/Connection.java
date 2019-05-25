@@ -27,6 +27,7 @@ public abstract class Connection extends Thread {
     public HostPort remoteHostPort; // This is the address/port the peer tells us
     public InetSocketAddress remoteAddress; // The is the address/port the connection is actually coming from
     public boolean isIncomingConnection;
+    public boolean isClient = false;
 
     public enum ConnectionState { CONNECTING, CONNECTED, DONE }
     public ConnectionState connectionState = ConnectionState.CONNECTING;
@@ -130,7 +131,12 @@ public abstract class Connection extends Thread {
     protected boolean receiveHandshake() throws IOException, BadMessageException {
         Document request = receiveMessageFromPeer();
         if (!request.getString(Commands.COMMAND).equals(Commands.HANDSHAKE_REQUEST)) {
-            throw new BadMessageException("Peer " + this.remoteAddress + " did not open with handshake request");
+        	if(request.getString(Commands.COMMAND).equals(Commands.AUTH_REQUEST)) {
+        		isClient = true;
+        		return receiveAuthResponse(request);
+        	}else {
+        		throw new BadMessageException("Peer " + this.remoteAddress + " did not open with handshake request");
+        	}
         }
         remoteHostPort = new HostPort(request.getDocument(Commands.HOST_PORT));
         if (server.countIncomingConnections() >=
@@ -171,25 +177,36 @@ public abstract class Connection extends Thread {
     }
 
     /**
-     * Perform the handshake as the receiving party.
+     * Perform the client auth as the receiving party.
      * @return false if we sent CONNECTION_REFUSED because we are at maximumIncommingConnections, true otherwise
      * @throws IOException If communication fails
      * @throws BadMessageException If we received an incorrect message
      */
     protected boolean receiveAuthResponse() throws IOException, BadMessageException {
         Document request = receiveMessageFromPeer();
-        if (!request.getString(Commands.COMMAND).equals(Commands.AUTH_RESPONSE)) {
-            throw new BadMessageException("Peer " + this.remoteAddress + " did not open with auth request");
-        }
-        remoteHostPort = new HostPort(request.getDocument(Commands.HOST_PORT));
-        if (server.countIncomingConnections() >=
-                Integer.parseInt(Configuration.getConfigurationValue("maximumIncommingConnections"))) {
-            refuseConnection();
-            return false;
+        if (!request.getString(Commands.COMMAND).equals(Commands.AUTH_REQUEST)) {
+            throw new BadMessageException("Client " + this.remoteAddress + " did not open with auth request");
         }
         Document reply = new Document();
-        reply.append(Commands.COMMAND, Commands.HANDSHAKE_RESPONSE);
-        reply.append(Commands.HOST_PORT, Configuration.getLocalHostPort());
+        reply.append(Commands.COMMAND, Commands.AUTH_RESPONSE);
+        reply.append(Commands.STATUS, false);
+        sendMessageToPeer(reply);
+        return true;
+    }
+
+    /**
+     * Perform the client auth as the receiving party.
+     * @return false if we sent CONNECTION_REFUSED because we are at maximumIncommingConnections, true otherwise
+     * @throws IOException If communication fails
+     * @throws BadMessageException If we received an incorrect message
+     */
+    protected boolean receiveAuthResponse(Document request) throws IOException, BadMessageException {
+        if (!request.getString(Commands.COMMAND).equals(Commands.AUTH_REQUEST)) {
+            throw new BadMessageException("Client " + this.remoteAddress + " did not open with auth request");
+        }
+        Document reply = new Document();
+        reply.append(Commands.COMMAND, Commands.AUTH_RESPONSE);
+        reply.append(Commands.STATUS, false);
         sendMessageToPeer(reply);
         return true;
     }

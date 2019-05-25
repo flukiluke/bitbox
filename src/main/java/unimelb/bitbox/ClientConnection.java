@@ -6,13 +6,12 @@ import unimelb.bitbox.util.Document;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.util.logging.Logger;
+import java.net.UnknownHostException;
 
 public class ClientConnection extends Connection {
     private Socket clientSocket;
     private BufferedWriter outStream;
     private BufferedReader inStream;
-    private Client client;
     private CmdLineArgs clientCommand;
 
     /**
@@ -23,20 +22,22 @@ public class ClientConnection extends Connection {
      * @param server An instance of the main server object
      * @param remoteAddress The address/port target to connect to
      */
-    public ClientConnection(InetSocketAddress remoteAddress, CmdLineArgs clientCommand) {
+    public ClientConnection(Socket socket, CmdLineArgs clientCommand) {
         isIncomingConnection = false;
-        this.remoteAddress = remoteAddress;
         this.clientCommand = clientCommand;
-        log = Logger.getLogger(Client.class.getName());
-        log.info("Start new IO thread for outgoing peer at " + remoteAddress);
+        clientSocket = socket;
+        log.info("Start new IO thread for outgoing peer at " + socket.getRemoteSocketAddress());
+        //this.commandProcessor = new CommandProcessor(server.fileSystemManager);
         try {
-            clientSocket = new Socket(remoteAddress.getAddress(), remoteAddress.getPort());
-        } catch (IOException e) {
-            log.severe("Socket creation failed, IO thread for " + remoteAddress + " exiting");
-            connectionState = ConnectionState.DONE;
-            return;
-        }
+            inStream = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
+			outStream = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"));
+        }catch (UnknownHostException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} 
         this.setDaemon(true);
+        //server.registerNewConnection(this);
         start();
     }
 
@@ -56,14 +57,11 @@ public class ClientConnection extends Connection {
         start();
     }
 
-   
     protected boolean initialise() {
         boolean success;
         try {
-            outStream = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream(), "UTF-8"));
-            inStream = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             if (isIncomingConnection) {
-                success = receiveAuthResponse();
+                success = receiveHandshake();
             } else {
                 success = sendAuthRequest(clientCommand);
             }
@@ -101,12 +99,16 @@ public class ClientConnection extends Connection {
 
     protected Document receiveMessageFromPeer() throws BadMessageException, IOException {
         String input;
+    	log.info("HM 0- delete me");
         synchronized (inStream) {
+        	log.info("HM 1- delete me");
             input = inStream.readLine();
         }
         if (input == null) {
+        	log.info("HM - delete me");
             throw new IOException();
         }
+    	log.info("HM 2- delete me");
         Document doc = Document.parse(input);
         //log.info("Received message from peer: " + doc);
         return doc;

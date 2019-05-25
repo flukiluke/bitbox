@@ -121,11 +121,6 @@ public class Configuration {
  			//Parse the arguments
  			parser.parseArgument(args);
  			
- 			//After parsing, the fields in argsBean have been updated with the given
- 			//command line arguments
- 			System.out.println("Server: " + argsBean.getServer());
- 			System.out.println("Peer: " + argsBean.getPeer());
- 			
  		} catch (CmdLineException e) {
  			
  			System.err.println(e.getMessage());

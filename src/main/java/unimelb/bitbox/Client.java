@@ -8,6 +8,8 @@ import unimelb.bitbox.util.HostPort;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.logging.Logger;
@@ -35,6 +37,13 @@ public class Client {
         connect(clientCommand);
         
         
+        //TODO program currently runs forever, should run until thread is finished
+        while(true) {
+        	
+        	continue;
+        }
+        
+        
         /* This main function returns once we've created initial connections.
          * The program will not exit until the server thread finishes.
          */
@@ -42,10 +51,10 @@ public class Client {
     
 
 
-	public static void connect(CmdLineArgs clientCommand) {
+	public static void connect(CmdLineArgs clientCommand) throws UnknownHostException, IOException {
 		// TODO Auto-generated method stub
 		HostPort peer = new HostPort(clientCommand.getPeer());
-        InetSocketAddress remoteAddress = new InetSocketAddress(peer.host, peer.port);
-        connection = new ClientConnection(remoteAddress, clientCommand);
+        Socket socket = new Socket(peer.host, peer.port);
+        connection = new ClientConnection(socket, clientCommand);
 	}
 }
