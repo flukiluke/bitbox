@@ -1,6 +1,7 @@
 package unimelb.bitbox;
 
 import unimelb.bitbox.Connection.ConnectionState;
+import unimelb.bitbox.util.AES;
 import unimelb.bitbox.util.CmdLineArgs;
 import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
@@ -142,10 +143,11 @@ public class ClientConnection extends Connection {
     /**
      * Perform the client auth as the receiving party.
      * @return false if we sent CONNECTION_REFUSED because we are at maximumIncommingConnections, true otherwise
-     * @throws IOException If communication fails
-     * @throws BadMessageException If we received an incorrect message
+     * @throws IOException 
+     * @throws BadMessageException 
+     * @throws Exception 
      */
-    private boolean receiveAuthResponse() throws IOException, BadMessageException {
+    private boolean receiveAuthResponse() throws BadMessageException, IOException  {
         Document request = receiveMessageFromPeer();
         if (!request.getString(Commands.COMMAND).equals(Commands.AUTH_REQUEST)) {
             throw new BadMessageException("Client " + this.remoteAddress + " did not open with auth request");
@@ -153,8 +155,9 @@ public class ClientConnection extends Connection {
         Document reply = new Document();
         
         Boolean foundKey = false;
+        String publicKey = "";
         for(String key : Configuration.getConfigurationValue("authorized_keys").split(",")){
-        	String publicKey = key.split(" ")[1];
+        	publicKey = key;
         	String identity = key.split(" ")[2];
         	log.info("looking for: " + request.get("identity") + ", found: "+ identity);
         	if(identity.equals(request.get("identity"))) {
@@ -171,6 +174,16 @@ public class ClientConnection extends Connection {
 	        reply.append(Commands.COMMAND, Commands.AUTH_RESPONSE);
 	        reply.append(Commands.STATUS, true);
 	        reply.append(Commands.MESSAGE, "public key found");
+	        
+	        //encrypt secret key
+	        String secretKey;
+			try {
+				secretKey = AES.encrypt(publicKey, "123lol");
+			} catch (Exception e) {
+				log.severe("Client " + this.remoteAddress + " invalid key");
+				return false;
+			}
+	        reply.append(Commands.AES128, secretKey);
         }
         sendMessageToPeer(reply);
         return true;

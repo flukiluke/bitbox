@@ -52,4 +52,5 @@ public class Commands {
     public final static String PEERS = "peers";
     public static final String SYNC_INTERVAL = "syncInterval";
     public static final String IDENTITY = "identity";
+	public static final String AES128 = "AES128";
 }
