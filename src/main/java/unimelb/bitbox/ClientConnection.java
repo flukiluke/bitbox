@@ -2,6 +2,7 @@ package unimelb.bitbox;
 
 import unimelb.bitbox.Connection.ConnectionState;
 import unimelb.bitbox.util.CmdLineArgs;
+import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
 
 import java.io.*;
@@ -92,7 +93,7 @@ public class ClientConnection extends Connection {
 			outStream = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream(), "UTF-8"));
       
             if (isIncomingConnection) {
-                success = this.receiveAuthResponse();
+                success = receiveAuthResponse();
             } else {
                 success = sendAuthRequest(clientCommand);
             }
@@ -108,6 +109,70 @@ public class ClientConnection extends Connection {
             terminateConnection(e.getMessage());
             return false;
         }
+        return true;
+    }
+    
+
+
+    /**
+     * Perform the handshake as the initiating party.
+     * @param clientCommand 
+     * @return false if we got CONNECTION_REFUSED, true otherwise
+     * @throws IOException If communication fails
+     * @throws BadMessageException If we received an incorrect message
+     */
+    private boolean sendAuthRequest(CmdLineArgs clientCommand) throws IOException, BadMessageException {
+        Document doc = new Document();
+        doc.append(Commands.COMMAND, Commands.AUTH_REQUEST);
+        doc.append(Commands.IDENTITY, clientCommand.getIdentity());
+        sendMessageToPeer(doc);
+
+        Document reply = receiveMessageFromPeer();
+        if (reply.getString(Commands.COMMAND).equals(Commands.AUTH_RESPONSE)) {
+        	if(!reply.getBoolean(Commands.STATUS)) {
+                return false;
+        	}
+        } else if (!reply.getString(Commands.COMMAND).equals(Commands.HANDSHAKE_RESPONSE)) {
+            throw new BadMessageException("Peer " + this.remoteAddress + " did not respond with auth response " +
+                    "response, responded with " + reply.getString(Commands.COMMAND));
+        }
+        return true;
+    }
+
+    /**
+     * Perform the client auth as the receiving party.
+     * @return false if we sent CONNECTION_REFUSED because we are at maximumIncommingConnections, true otherwise
+     * @throws IOException If communication fails
+     * @throws BadMessageException If we received an incorrect message
+     */
+    private boolean receiveAuthResponse() throws IOException, BadMessageException {
+        Document request = receiveMessageFromPeer();
+        if (!request.getString(Commands.COMMAND).equals(Commands.AUTH_REQUEST)) {
+            throw new BadMessageException("Client " + this.remoteAddress + " did not open with auth request");
+        }
+        Document reply = new Document();
+        
+        Boolean foundKey = false;
+        for(String key : Configuration.getConfigurationValue("authorized_keys").split(",")){
+        	String publicKey = key.split(" ")[1];
+        	String identity = key.split(" ")[2];
+        	log.info("looking for: " + request.get("identity") + ", found: "+ identity);
+        	if(identity.equals(request.get("identity"))) {
+        		foundKey = true;
+        		break;
+        	}
+        }
+        
+        if(!foundKey) {
+	        reply.append(Commands.COMMAND, Commands.AUTH_RESPONSE);
+	        reply.append(Commands.STATUS, false);
+	        reply.append(Commands.MESSAGE, "public key not found");
+        }else {
+	        reply.append(Commands.COMMAND, Commands.AUTH_RESPONSE);
+	        reply.append(Commands.STATUS, true);
+	        reply.append(Commands.MESSAGE, "public key found");
+        }
+        sendMessageToPeer(reply);
         return true;
     }
 

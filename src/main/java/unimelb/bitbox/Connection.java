@@ -131,12 +131,7 @@ public abstract class Connection extends Thread {
     protected boolean receiveHandshake() throws IOException, BadMessageException {
         Document request = receiveMessageFromPeer();
         if (!request.getString(Commands.COMMAND).equals(Commands.HANDSHAKE_REQUEST)) {
-        	if(request.getString(Commands.COMMAND).equals(Commands.AUTH_REQUEST)) {
-        		isClient = true;
-        		return receiveAuthResponse(request);
-        	}else {
-        		throw new BadMessageException("Peer " + this.remoteAddress + " did not open with handshake request");
-        	}
+        	throw new BadMessageException("Peer " + this.remoteAddress + " did not open with handshake request");
         }
         remoteHostPort = new HostPort(request.getDocument(Commands.HOST_PORT));
         if (server.countIncomingConnections() >=
@@ -147,104 +142,6 @@ public abstract class Connection extends Thread {
         Document reply = new Document();
         reply.append(Commands.COMMAND, Commands.HANDSHAKE_RESPONSE);
         reply.append(Commands.HOST_PORT, Configuration.getLocalHostPort());
-        sendMessageToPeer(reply);
-        return true;
-    }
-
-    /**
-     * Perform the handshake as the initiating party.
-     * @param clientCommand 
-     * @return false if we got CONNECTION_REFUSED, true otherwise
-     * @throws IOException If communication fails
-     * @throws BadMessageException If we received an incorrect message
-     */
-    protected boolean sendAuthRequest(CmdLineArgs clientCommand) throws IOException, BadMessageException {
-        Document doc = new Document();
-        doc.append(Commands.COMMAND, Commands.AUTH_REQUEST);
-        doc.append(Commands.IDENTITY, clientCommand.getIdentity());
-        sendMessageToPeer(doc);
-
-        Document reply = receiveMessageFromPeer();
-        if (reply.getString(Commands.COMMAND).equals(Commands.AUTH_RESPONSE)) {
-        	if(!reply.getBoolean(Commands.STATUS)) {
-                return false;
-        	}
-        } else if (!reply.getString(Commands.COMMAND).equals(Commands.HANDSHAKE_RESPONSE)) {
-            throw new BadMessageException("Peer " + this.remoteAddress + " did not respond with auth response " +
-                    "response, responded with " + reply.getString(Commands.COMMAND));
-        }
-        return true;
-    }
-
-    /**
-     * Perform the client auth as the receiving party.
-     * @return false if we sent CONNECTION_REFUSED because we are at maximumIncommingConnections, true otherwise
-     * @throws IOException If communication fails
-     * @throws BadMessageException If we received an incorrect message
-     */
-    protected boolean receiveAuthResponse() throws IOException, BadMessageException {
-        Document request = receiveMessageFromPeer();
-        if (!request.getString(Commands.COMMAND).equals(Commands.AUTH_REQUEST)) {
-            throw new BadMessageException("Client " + this.remoteAddress + " did not open with auth request");
-        }
-        Document reply = new Document();
-        
-        Boolean foundKey = false;
-        for(String key : Configuration.getConfigurationValue("authorized_keys").split(",")){
-        	String publicKey = key.split(" ")[1];
-        	String identity = key.split(" ")[2];
-        	log.info("looking for: " + request.get("identity") + ", found: "+ identity);
-        	if(identity.equals(request.get("identity"))) {
-        		foundKey = true;
-        		break;
-        	}
-        }
-        
-        if(!foundKey) {
-	        reply.append(Commands.COMMAND, Commands.AUTH_RESPONSE);
-	        reply.append(Commands.STATUS, false);
-	        reply.append(Commands.MESSAGE, "public key not found");
-        }else {
-	        reply.append(Commands.COMMAND, Commands.AUTH_RESPONSE);
-	        reply.append(Commands.STATUS, true);
-	        reply.append(Commands.MESSAGE, "public key found");
-        }
-        sendMessageToPeer(reply);
-        return true;
-    }
-
-    /**
-     * Perform the client auth as the receiving party.
-     * @return false if we sent CONNECTION_REFUSED because we are at maximumIncommingConnections, true otherwise
-     * @throws IOException If communication fails
-     * @throws BadMessageException If we received an incorrect message
-     */
-    protected boolean receiveAuthResponse(Document request) throws IOException, BadMessageException {
-        if (!request.getString(Commands.COMMAND).equals(Commands.AUTH_REQUEST)) {
-            throw new BadMessageException("Client " + this.remoteAddress + " did not open with auth request");
-        }
-        Document reply = new Document();
-        
-        Boolean foundKey = false;
-        for(String key : Configuration.getConfigurationValue("authorized_keys").split(",")){
-        	String publicKey = key.split(" ")[1];
-        	String identity = key.split(" ")[2];
-        	log.info("looking for: " + request.get("identity") + ", found: "+ identity);
-        	if(identity.equals(request.get("identity"))) {
-        		foundKey = true;
-        		break;
-        	}
-        }
-        
-        if(!foundKey) {
-	        reply.append(Commands.COMMAND, Commands.AUTH_RESPONSE);
-	        reply.append(Commands.STATUS, false);
-	        reply.append(Commands.MESSAGE, "public key not found");
-        }else {
-	        reply.append(Commands.COMMAND, Commands.AUTH_RESPONSE);
-	        reply.append(Commands.STATUS, true);
-	        reply.append(Commands.MESSAGE, "public key found");
-        }
         sendMessageToPeer(reply);
         return true;
     }
