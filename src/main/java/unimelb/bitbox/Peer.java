@@ -32,6 +32,7 @@ public class Peer {
         Configuration.parseCmdLineArgs(args);
 
         Server server;
+        Server clientServer;
         if (Configuration.getConfigurationValue("mode").equals("udp")) {
             udpMode = true;
             server = new UDPServer();
@@ -39,7 +40,9 @@ public class Peer {
             udpMode = false;
             server = new TCPServer();
         }
+        clientServer = new ClientServer(server);
         server.start();
+        clientServer.start();
 
         ArrayList<HostPort> peers = new ArrayList<>();
         for (String peer : Configuration.getConfigurationValue("peers").split(",")) {

@@ -48,6 +48,7 @@ public class Commands {
     public final static String HOST_PORT = "hostPort";
     public final static String HOST = "host";
     public final static String PORT = "port";
+    public final static String CLIENT_PORT = "clientPort";
     public final static String PEERS = "peers";
     public static final String SYNC_INTERVAL = "syncInterval";
     public static final String IDENTITY = "identity";

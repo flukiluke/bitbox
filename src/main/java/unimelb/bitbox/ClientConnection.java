@@ -30,14 +30,6 @@ public class ClientConnection extends Connection {
         clientSocket = socket;
         log.info("Start new IO thread for outgoing peer at " + socket.getRemoteSocketAddress());
         //this.commandProcessor = new CommandProcessor(server.fileSystemManager);
-        try {
-            inStream = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
-			outStream = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"));
-        }catch (UnknownHostException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} 
         this.setDaemon(true);
         //server.registerNewConnection(this);
         start();
@@ -48,7 +40,7 @@ public class ClientConnection extends Connection {
      *
      * @param clientSocket A socket from accept() connected to the peer
      */
-    public ClientConnection(TCPServer server, Socket clientSocket) {
+    public ClientConnection(ClientServer server, Socket clientSocket) {
         isIncomingConnection = true;
         this.remoteAddress = new InetSocketAddress(clientSocket.getInetAddress(), clientSocket.getPort());
         log.info("Start new IO thread for incoming peer at " + this.remoteAddress);
@@ -96,8 +88,11 @@ public class ClientConnection extends Connection {
     protected boolean initialise() {
         boolean success;
         try {
+            inStream = new BufferedReader(new InputStreamReader(clientSocket.getInputStream(), "UTF-8"));
+			outStream = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream(), "UTF-8"));
+      
             if (isIncomingConnection) {
-                success = receiveHandshake();
+                success = this.receiveAuthResponse();
             } else {
                 success = sendAuthRequest(clientCommand);
             }
