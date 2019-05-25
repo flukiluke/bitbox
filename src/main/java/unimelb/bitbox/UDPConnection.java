@@ -69,7 +69,7 @@ public class UDPConnection extends Connection {
         catch (BadMessageException e) {
             // ignore
         }
-        log.info("Sent message to peer: " + doc);
+        // log.info("Sent message to peer: " + doc);
     }
 
     public void addReceivedMessage(String message) {
@@ -85,7 +85,7 @@ public class UDPConnection extends Connection {
         try {
             synchronized (incomingMessages) {
                 while (incomingMessages.size() == 0) {
-                    incomingMessages.wait(200); // I just picked a number
+                    incomingMessages.wait(Integer.parseInt(Configuration.getConfigurationValue("udpTimeout")));
                     handleResends();
                 }
                 input = incomingMessages.remove(0);
@@ -95,7 +95,7 @@ public class UDPConnection extends Connection {
             return null;
         }
         Document doc = Document.parse(input);
-        log.info("Received message from peer: " + doc);
+        // log.info("Received message from peer: " + doc);
         // Normally I'd use Collection::removeIf but it seems to have trouble with checked exceptions
         synchronized (activeMessages) {
             for (Iterator<Message> iterator = activeMessages.listIterator(); iterator.hasNext(); ) {
@@ -105,7 +105,7 @@ public class UDPConnection extends Connection {
                 }
             }
         }
-        log.info(activeMessages.size() + " in transit");
+        //log.info(activeMessages.size() + " in transit");
         return doc;
     }
 
@@ -138,13 +138,14 @@ public class UDPConnection extends Connection {
         }
 
         public void resendIfNeeded() throws IOException {
-            if (lastSendTime > System.currentTimeMillis() - 1000) {
+            if (lastSendTime > System.currentTimeMillis() - Integer.parseInt(Configuration.getConfigurationValue("udpTimeout"))) {
                 return;
             }
-            if (attemptNumber++ > 5) {
+            if (attemptNumber++ > Integer.parseInt(Configuration.getConfigurationValue("udpRetries"))) {
                 throw new IOException("Message retry limit reached");
             }
             ((UDPServer) server).send(packet);
+            System.out.println("Packet resent");
             lastSendTime = System.currentTimeMillis();
         }
 
