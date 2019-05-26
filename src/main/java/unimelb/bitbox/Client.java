@@ -1,5 +1,6 @@
 package unimelb.bitbox;
 
+import unimelb.bitbox.util.AES;
 import unimelb.bitbox.util.CmdLineArgs;
 import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
@@ -13,6 +14,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
+import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
@@ -55,6 +57,12 @@ public class Client {
 			log.info("secret" + encryptedString);
 			String decoded = SSH.decrypt(encryptedString);
 			log.info("decoded" + decoded);
+			
+			Key key = AES.generateSecretKey();
+			
+			String encrypt = AES.encrypt("123lol", key);
+			log.info("encrypted: " + encrypt);
+			log.info("decrypted: " + AES.decrypt(encrypt, key));
 		} catch (InvalidKeyException | NoSuchPaddingException | InvalidAlgorithmParameterException
 				| IllegalBlockSizeException | BadPaddingException | InvalidKeySpecException e) {
 			// TODO Auto-generated catch block

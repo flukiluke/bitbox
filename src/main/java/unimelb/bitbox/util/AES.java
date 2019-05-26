@@ -1,8 +1,10 @@
 package unimelb.bitbox.util;
 
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
+import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Base64;
@@ -18,9 +20,40 @@ import javax.crypto.spec.SecretKeySpec;
 
 public class AES {
 	
-	public static String generateSecretKey(String publicKey) {
-		return null;
+	public static Key generateSecretKey() {
+		SecureRandom secureRandom = new SecureRandom();
+		byte[] key = new byte[16];
+		secureRandom.nextBytes(key);
+		return new SecretKeySpec(key, "AES");
 	}
+	
+	public static String encrypt(String message, Key aesKey) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException{
+		// Encrypt first
+			Cipher cipher = Cipher.getInstance("AES");
+			// Perform encryption
+			cipher.init(Cipher.ENCRYPT_MODE, aesKey);
+			byte[] encrypted = cipher.doFinal(message.getBytes("UTF-8"));
+			System.err.println("Encrypted text: "+new String(encrypted));
+			return Base64.getEncoder().encodeToString(encrypted);
+	}
+	
+	public static String decrypt(String message, Key aesKey){
+		// Decrypt result
+		try {
+			Cipher cipher = Cipher.getInstance("AES");
+			cipher.init(Cipher.DECRYPT_MODE, aesKey);
+			message = new String(cipher.doFinal(Base64.getDecoder().decode(message.getBytes())));
+			System.err.println("Decrypted message: "+message);
+			return message;
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return "";
+	}
+	
+	/*
 	
 	public static String encrypt(String keyString, String input) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException {
 		
@@ -69,4 +102,5 @@ public class AES {
 		
 		return plainText.toString();
 	}
+	*/
 }
