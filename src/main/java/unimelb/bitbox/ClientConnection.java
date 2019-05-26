@@ -78,13 +78,14 @@ public class ClientConnection extends Connection {
             while (!interrupted()) {
             	if(!isIncomingConnection) {
             		//TODO send client command
-            		sendEncryptedMessage("lol");
+            		//sendEncryptedMessage("lol");
+            		sendEncryptedClientCommand();
             	}
                 ArrayList<Document> msgOut;
                 Document msgIn = receiveMessageFromPeer();
+                msgIn = decryptMessage(msgIn);
                 
-                //TODO replace this with decrypt message and log results/send back results
-                printEncryptedMessage(msgIn);
+                log.info(msgIn.getString(Commands.COMMAND));
                 
                 //TODO clean code up a little/improve logging and test with elanors code
                 
@@ -154,11 +155,25 @@ public class ClientConnection extends Connection {
     }
     
     
+    private void sendEncryptedClientCommand() throws IOException {
+    	Document doc = new Document();
+    	doc.append(Commands.COMMAND, clientCommand.getCommand());
+    	sendEncryptedMessage(doc.toJson().toString());
+    }
+    
+    
     private void printEncryptedMessage(Document doc) throws IOException, BadMessageException {
     	String encrypted = doc.getString(Commands.PAYLOAD);
     	String decrypted;
 		decrypted = AES.decrypt(encrypted, secretKey);
 		log.info("did it work?: " + decrypted);
+    }
+    
+    private Document decryptMessage(Document doc) throws IOException, BadMessageException {
+    	String encrypted = doc.getString(Commands.PAYLOAD);
+    	String decrypted;
+		decrypted = AES.decrypt(encrypted, secretKey);
+		return Document.parse(decrypted);
     }
 
 
