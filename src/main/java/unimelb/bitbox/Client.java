@@ -4,15 +4,24 @@ import unimelb.bitbox.util.CmdLineArgs;
 import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.HostPort;
+import unimelb.bitbox.util.SSH;
 
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.logging.Logger;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 
 /**
  * Main class for the BitBox peer.
@@ -35,6 +44,22 @@ public class Client {
         CmdLineArgs clientCommand = Configuration.parseClientCmdLineArgs(args);
         
         connect(clientCommand);
+        
+        String publicKey = Configuration.getConfigurationValue("authorized_keys");
+		log.info(publicKey);
+		String secretKey;
+		try {
+			secretKey = SSH.encrypt(publicKey, "123lol").toString();
+			String encryptedString = Base64.getEncoder().encodeToString(SSH.encrypt(publicKey, "123lol"));
+			log.info("secret" + secretKey);
+			log.info("secret" + encryptedString);
+			String decoded = SSH.decrypt(encryptedString);
+			log.info("decoded" + decoded);
+		} catch (InvalidKeyException | NoSuchPaddingException | InvalidAlgorithmParameterException
+				| IllegalBlockSizeException | BadPaddingException | InvalidKeySpecException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
         
         
         //TODO program currently runs forever, should run until thread is finished

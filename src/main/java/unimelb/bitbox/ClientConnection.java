@@ -5,6 +5,7 @@ import unimelb.bitbox.util.AES;
 import unimelb.bitbox.util.CmdLineArgs;
 import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
+import unimelb.bitbox.util.SSH;
 
 import java.io.*;
 import java.net.InetSocketAddress;
@@ -178,7 +179,14 @@ public class ClientConnection extends Connection {
 	        //encrypt secret key
 	        String secretKey;
 			try {
-				secretKey = AES.encrypt(publicKey, "123lol");
+				log.info(publicKey);
+				secretKey = SSH.encrypt(publicKey, "123lol").toString();
+				log.info("secret" + secretKey);
+				String decoded = SSH.decrypt(secretKey);
+				log.info(decoded);
+				
+				
+				
 			} catch (Exception e) {
 				log.severe("Client " + this.remoteAddress + " invalid key");
 				return false;
