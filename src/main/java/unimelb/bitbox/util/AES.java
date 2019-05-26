@@ -20,26 +20,34 @@ import javax.crypto.spec.SecretKeySpec;
 
 public class AES {
 	
-	public static Key generateSecretKey() {
+	public static byte[] generateSecretKey() {
 		SecureRandom secureRandom = new SecureRandom();
 		byte[] key = new byte[16];
 		secureRandom.nextBytes(key);
-		return new SecretKeySpec(key, "AES");
+		return key;
 	}
 	
-	public static String encrypt(String message, Key aesKey) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException{
+	public static String encrypt(String message, byte[] key) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException{
 		// Encrypt first
+			return encrypt(message.getBytes("UTF-8"), key);
+	}
+	
+
+	public static String encrypt(byte[] message, byte[] key) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException{
+		// Encrypt first
+			Key aesKey = new SecretKeySpec(key, "AES");
 			Cipher cipher = Cipher.getInstance("AES");
 			// Perform encryption
 			cipher.init(Cipher.ENCRYPT_MODE, aesKey);
-			byte[] encrypted = cipher.doFinal(message.getBytes("UTF-8"));
+			byte[] encrypted = cipher.doFinal(message);
 			System.err.println("Encrypted text: "+new String(encrypted));
 			return Base64.getEncoder().encodeToString(encrypted);
 	}
 	
-	public static String decrypt(String message, Key aesKey){
+	public static String decrypt(String message, byte[] key){
 		// Decrypt result
 		try {
+			Key aesKey = new SecretKeySpec(key, "AES");
 			Cipher cipher = Cipher.getInstance("AES");
 			cipher.init(Cipher.DECRYPT_MODE, aesKey);
 			message = new String(cipher.doFinal(Base64.getDecoder().decode(message.getBytes())));

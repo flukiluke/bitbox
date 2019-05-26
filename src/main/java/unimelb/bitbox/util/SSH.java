@@ -50,6 +50,12 @@ public class SSH {
 	
 	
 	  public static byte[] encrypt(String keyString, String input) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException {
+		  return encrypt(keyString, input.getBytes());
+	}
+	  
+
+		
+	  public static byte[] encrypt(String keyString, byte[] bytes) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException {
 		  SSHEncodedToRSAPublicConverter(keyString);
 		  KeySpec spec = convertToRSAPublicKey();
 		  KeyFactory kf = KeyFactory.getInstance("RSA");
@@ -57,20 +63,20 @@ public class SSH {
 		  
 		  Cipher cipher = Cipher.getInstance("RSA");
 		  cipher.init(Cipher.ENCRYPT_MODE, pubKey);
-		  byte[] cipherData = cipher.doFinal(input.getBytes());
+		  byte[] cipherData = cipher.doFinal(bytes);
 		  return cipherData;
 	}
 
-	public static String decrypt(String input) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
+	public static byte[] decrypt(String input) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
         return decrypt(Base64.decode(input.getBytes()));
 	}
 	
-	public static String decrypt(byte[] data) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
+	public static byte[] decrypt(byte[] data) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
 		  PrivateKey privKey = getPrivate();
 		  Cipher cipher;
 		  cipher = Cipher.getInstance("RSA");
 		  cipher.init(Cipher.DECRYPT_MODE, privKey);
-	      return new String(cipher.doFinal(data));
+	      return cipher.doFinal(data);
 	}
 	
 

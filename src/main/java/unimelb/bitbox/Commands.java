@@ -53,4 +53,5 @@ public class Commands {
     public static final String SYNC_INTERVAL = "syncInterval";
     public static final String IDENTITY = "identity";
 	public static final String AES128 = "AES128";
+	public static final String PAYLOAD = "payload";
 }

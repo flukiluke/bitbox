@@ -46,28 +46,7 @@ public class Client {
         CmdLineArgs clientCommand = Configuration.parseClientCmdLineArgs(args);
         
         connect(clientCommand);
-        
-        String publicKey = Configuration.getConfigurationValue("authorized_keys");
-		log.info(publicKey);
-		String secretKey;
-		try {
-			secretKey = SSH.encrypt(publicKey, "123lol").toString();
-			String encryptedString = Base64.getEncoder().encodeToString(SSH.encrypt(publicKey, "123lol"));
-			log.info("secret" + secretKey);
-			log.info("secret" + encryptedString);
-			String decoded = SSH.decrypt(encryptedString);
-			log.info("decoded" + decoded);
-			
-			Key key = AES.generateSecretKey();
-			
-			String encrypt = AES.encrypt("123lol", key);
-			log.info("encrypted: " + encrypt);
-			log.info("decrypted: " + AES.decrypt(encrypt, key));
-		} catch (InvalidKeyException | NoSuchPaddingException | InvalidAlgorithmParameterException
-				| IllegalBlockSizeException | BadPaddingException | InvalidKeySpecException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		
         
         
         //TODO program currently runs forever, should run until thread is finished

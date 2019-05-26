@@ -11,13 +11,23 @@ import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
+import java.util.Base64;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 
 public class ClientConnection extends Connection {
     private Socket clientSocket;
     private BufferedWriter outStream;
     private BufferedReader inStream;
     private CmdLineArgs clientCommand;
+    private byte[] secretKey;
 
     /**
      * This constructor initiates a connection to a peer. It does not return until
@@ -66,15 +76,27 @@ public class ClientConnection extends Connection {
         connectionState = ConnectionState.CONNECTED;
         try {
             while (!interrupted()) {
+            	if(!isIncomingConnection) {
+            		//TODO send client command
+            		sendEncryptedMessage("lol");
+            	}
                 ArrayList<Document> msgOut;
                 Document msgIn = receiveMessageFromPeer();
-                if (msgIn.getString(Commands.COMMAND).equals(Commands.INVALID_PROTOCOL)) {
+                
+                //TODO replace this with decrypt message and log results/send back results
+                printEncryptedMessage(msgIn);
+                
+                //TODO clean code up a little/improve logging and test with elanors code
+                
+                /*if (msgIn.getString(Commands.COMMAND).equals(Commands.INVALID_PROTOCOL)) {
                     // That's unfortunate
                     log.severe("Peer reckons we sent an invalid message. Disconnecting from " + this.remoteAddress);
                     closeConnection();
                     connectionState = ConnectionState.DONE;
                     return;
                 }
+                */
+                
                 //msgOut = commandProcessor.handleMessage(msgIn);
                 //for (Document msg : msgOut) {
                 //    sendMessageToPeer(msg);
@@ -83,6 +105,7 @@ public class ClientConnection extends Connection {
         } catch (IOException e) {
             log.severe("Communication to " + this.remoteAddress + " failed, IO thread exiting (" + e.getMessage() +")");
         } catch (BadMessageException e) {
+        	log.info("error 2");
             terminateConnection(e.getMessage());
         }
         connectionState = ConnectionState.DONE;
@@ -107,13 +130,36 @@ public class ClientConnection extends Connection {
             log.severe("Setting up new peer connection failed, IO thread for "
                     + this.remoteAddress + " exiting");
             return false;
-        } catch (BadMessageException e) {
+        } catch (Exception e) {
+        	log.info("error 1");
             terminateConnection(e.getMessage());
             return false;
         }
         return true;
     }
     
+    
+    private void sendEncryptedMessage(String input) throws IOException {
+    	Document doc = new Document();
+    	String encrypted = "";
+		try {
+			encrypted = AES.encrypt(input, secretKey);
+		} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException
+				| BadPaddingException | UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    	doc.append(Commands.PAYLOAD, encrypted);
+    	sendMessageToPeer(doc);
+    }
+    
+    
+    private void printEncryptedMessage(Document doc) throws IOException, BadMessageException {
+    	String encrypted = doc.getString(Commands.PAYLOAD);
+    	String decrypted;
+		decrypted = AES.decrypt(encrypted, secretKey);
+		log.info("did it work?: " + decrypted);
+    }
 
 
     /**
@@ -134,10 +180,18 @@ public class ClientConnection extends Connection {
         	if(!reply.getBoolean(Commands.STATUS)) {
                 return false;
         	}
-        } else if (!reply.getString(Commands.COMMAND).equals(Commands.HANDSHAKE_RESPONSE)) {
+        } else if (!reply.getString(Commands.COMMAND).equals(Commands.AUTH_RESPONSE)) {
             throw new BadMessageException("Peer " + this.remoteAddress + " did not respond with auth response " +
                     "response, responded with " + reply.getString(Commands.COMMAND));
         }
+        
+        try {
+			secretKey = SSH.decrypt(reply.getString(Commands.AES128));
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+            throw new BadMessageException("Secret key not encrypted correctly");
+		} 
+        
         return true;
     }
 
@@ -146,9 +200,16 @@ public class ClientConnection extends Connection {
      * @return false if we sent CONNECTION_REFUSED because we are at maximumIncommingConnections, true otherwise
      * @throws IOException 
      * @throws BadMessageException 
+     * @throws InvalidKeySpecException 
+     * @throws BadPaddingException 
+     * @throws IllegalBlockSizeException 
+     * @throws InvalidAlgorithmParameterException 
+     * @throws NoSuchPaddingException 
+     * @throws NoSuchAlgorithmException 
+     * @throws InvalidKeyException 
      * @throws Exception 
      */
-    private boolean receiveAuthResponse() throws BadMessageException, IOException  {
+    private boolean receiveAuthResponse() throws BadMessageException, IOException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException  {
         Document request = receiveMessageFromPeer();
         if (!request.getString(Commands.COMMAND).equals(Commands.AUTH_REQUEST)) {
             throw new BadMessageException("Client " + this.remoteAddress + " did not open with auth request");
@@ -175,23 +236,12 @@ public class ClientConnection extends Connection {
 	        reply.append(Commands.COMMAND, Commands.AUTH_RESPONSE);
 	        reply.append(Commands.STATUS, true);
 	        reply.append(Commands.MESSAGE, "public key found");
-	        
-	        //encrypt secret key
-	        String secretKey;
-			try {
-				log.info(publicKey);
-				secretKey = SSH.encrypt(publicKey, "123lol").toString();
-				log.info("secret" + secretKey);
-				String decoded = SSH.decrypt(secretKey);
-				log.info(decoded);
-				
-				
-				
-			} catch (Exception e) {
-				log.severe("Client " + this.remoteAddress + " invalid key");
-				return false;
-			}
-	        reply.append(Commands.AES128, secretKey);
+
+			secretKey = AES.generateSecretKey();
+			String encryptedKey= Base64.getEncoder().encodeToString(SSH.encrypt(publicKey, secretKey));
+			log.info("key" + secretKey);
+			log.info("encrypted" + encryptedKey);
+	        reply.append(Commands.AES128, encryptedKey);
         }
         sendMessageToPeer(reply);
         return true;
