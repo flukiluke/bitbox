@@ -8,6 +8,11 @@ package unimelb.bitbox;
  * @author TransfictionRailways
  */
 public class Commands {
+	// list of line commands
+	public final static String LIST_PEERS = "list_peers";
+	public final static String CONNECT_PEER = "connect_peer";
+	public final static String DISCONNECT_PEER = "disconnect_peer";
+	
     // list of protocol commands
     public final static String INVALID_PROTOCOL = "INVALID_PROTOCOL";
     public final static String CONNECTION_REFUSED = "CONNECTION_REFUSED";
@@ -31,6 +36,13 @@ public class Commands {
     
     public final static String AUTH_REQUEST = "AUTH_REQUEST";
     public final static String AUTH_RESPONSE = "AUTH_RESPONSE";
+    
+    public final static String LIST_PEERS_REQUEST = "LIST_PEERS_REQUEST";
+    public final static String LIST_PEERS_RESPONSE = "LIST_PEERS_RESPONSE";
+    public final static String CONNECT_PEER_REQUEST = "CONNECT_PEER_REQUEST";
+    public final static String CONNECT_PEER_RESPONSE = "CONNECT_PEER_RESPONSE";
+    public final static String DISCONNECT_PEER_REQUEST = "DISCONNECT_PEER_REQUEST";
+    public final static String DISCONNECT_PEER_RESPONSE = "DISCONNECT_PEER_RESPONSE";
 
 
     // list of fields

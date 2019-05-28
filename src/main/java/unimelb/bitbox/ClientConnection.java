@@ -5,6 +5,7 @@ import unimelb.bitbox.util.AES;
 import unimelb.bitbox.util.CmdLineArgs;
 import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
+import unimelb.bitbox.util.HostPort;
 import unimelb.bitbox.util.SSH;
 
 import java.io.*;
@@ -27,6 +28,7 @@ public class ClientConnection extends Connection {
     private BufferedWriter outStream;
     private BufferedReader inStream;
     private CmdLineArgs clientCommand;
+    private ClientCommandProcessor clientCommandProcessor;
     private byte[] secretKey;
 
     /**
@@ -38,6 +40,7 @@ public class ClientConnection extends Connection {
      * @param remoteAddress The address/port target to connect to
      */
     public ClientConnection(Socket socket, CmdLineArgs clientCommand) {
+    	clientCommandProcessor = new ClientCommandProcessor();
         isIncomingConnection = false;
         this.clientCommand = clientCommand;
         clientSocket = socket;
@@ -54,6 +57,7 @@ public class ClientConnection extends Connection {
      * @param clientSocket A socket from accept() connected to the peer
      */
     public ClientConnection(ClientServer server, Socket clientSocket) {
+    	clientCommandProcessor = new ClientCommandProcessor(server);
         isIncomingConnection = true;
         this.remoteAddress = new InetSocketAddress(clientSocket.getInetAddress(), clientSocket.getPort());
         log.info("Start new IO thread for incoming peer at " + this.remoteAddress);
@@ -74,34 +78,31 @@ public class ClientConnection extends Connection {
             return;
         }
         connectionState = ConnectionState.CONNECTED;
-        try {
-            while (!interrupted()) {
-            	if(!isIncomingConnection) {
-            		//TODO send client command
-            		//sendEncryptedMessage("lol");
-            		sendEncryptedClientCommand();
-            	}
-                ArrayList<Document> msgOut;
-                Document msgIn = receiveMessageFromPeer();
-                msgIn = decryptMessage(msgIn);
-                
-                log.info(msgIn.getString(Commands.COMMAND));
-                
-                //TODO clean code up a little/improve logging and test with elanors code
-                
-                /*if (msgIn.getString(Commands.COMMAND).equals(Commands.INVALID_PROTOCOL)) {
-                    // That's unfortunate
-                    log.severe("Peer reckons we sent an invalid message. Disconnecting from " + this.remoteAddress);
-                    closeConnection();
-                    connectionState = ConnectionState.DONE;
-                    return;
-                }
-                */
-                
-                //msgOut = commandProcessor.handleMessage(msgIn);
-                //for (Document msg : msgOut) {
-                //    sendMessageToPeer(msg);
-               // }
+    try {
+        	if(!isIncomingConnection) {
+        		//TODO send client command
+        		//sendEncryptedMessage("lol");
+        		sendEncryptedClientCommand();
+        	}
+            ArrayList<Document> msgOut;
+            Document msgIn = receiveMessageFromPeer();
+            msgIn = decryptMessage(msgIn);
+            
+            log.info(msgIn.getString(Commands.COMMAND));
+            
+            //TODO clean code up a little/improve logging and test with elanors code
+            
+            if (msgIn.getString(Commands.COMMAND).equals(Commands.INVALID_PROTOCOL)) {
+                // That's unfortunate
+                log.severe("Peer reckons we sent an invalid message. Disconnecting from " + this.remoteAddress);
+                closeConnection();
+                connectionState = ConnectionState.DONE;
+                return;
+            }
+            
+            msgOut = clientCommandProcessor.handleMessage(msgIn);
+            for (Document msg : msgOut) {
+                sendEncryptedMessage(msg);
             }
         } catch (IOException e) {
             log.severe("Communication to " + this.remoteAddress + " failed, IO thread exiting (" + e.getMessage() +")");
@@ -152,13 +153,37 @@ public class ClientConnection extends Connection {
 		}
     	doc.append(Commands.PAYLOAD, encrypted);
     	sendMessageToPeer(doc);
+        log.info("Sent message to peer: " + input);
+    }
+    
+
+    private void sendEncryptedMessage(Document doc) throws IOException {
+    	sendEncryptedMessage(doc.toJson().toString());
     }
     
     
     private void sendEncryptedClientCommand() throws IOException {
     	Document doc = new Document();
-    	doc.append(Commands.COMMAND, clientCommand.getCommand());
-    	sendEncryptedMessage(doc.toJson().toString());
+    	switch(clientCommand.getCommand()) {
+	    	case Commands.LIST_PEERS:
+	    		doc.append(Commands.COMMAND, Commands.LIST_PEERS_REQUEST);
+	    		break;
+
+	    	case Commands.CONNECT_PEER:
+	    		doc.append(Commands.COMMAND, Commands.CONNECT_PEER_REQUEST);
+	    		HostPort s1 = new HostPort(clientCommand.getServer());
+	    		doc.append(Commands.HOST, s1.host);
+	    		doc.append(Commands.PORT, s1.port);
+	    		break;
+
+	    	case Commands.DISCONNECT_PEER:
+	    		doc.append(Commands.COMMAND, Commands.DISCONNECT_PEER_REQUEST);
+	    		HostPort s2 = new HostPort(clientCommand.getServer());
+	    		doc.append(Commands.HOST, s2.host);
+	    		doc.append(Commands.PORT, s2.port);
+	    		break;
+    	}
+    	sendEncryptedMessage(doc);
     }
     
     
