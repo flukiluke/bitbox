@@ -166,8 +166,6 @@ public abstract class Server extends Thread implements FileSystemObserver {
     }
 
 	public Boolean disconnectPeer(HostPort peer) {
-		// TODO Auto-generated method stub
-
         InetSocketAddress remoteAddress = new InetSocketAddress(peer.host, peer.port);
 		for(Connection connection : connections) {
 			if(connection.remoteHostPort.port == peer.port

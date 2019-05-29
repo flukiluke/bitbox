@@ -4,6 +4,7 @@ import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.HostPort;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
 
 /**
@@ -16,8 +17,6 @@ import java.util.logging.Logger;
 public class ClientCommandProcessor{
     private ArrayList<Document> responses;
 	private ClientServer server;
-    private static Logger log = Logger.getLogger(Server.class.getName());
-
 
     public ClientCommandProcessor(ClientServer server) {
         this.server = server;
@@ -66,9 +65,13 @@ public class ClientCommandProcessor{
         return this.responses;
     }
 
-    private void disconnectPeerResponse(Document msgIn) {
-		// TODO Auto-generated method stub
-
+    private void disconnectPeerResponse(Document msgIn) throws BadMessageException {
+        if (msgIn.getBoolean(Commands.STATUS)) {
+            System.out.format("Disconnect from %s OK\n", new HostPort(msgIn));
+        }
+        else {
+            System.out.format("Disconnect from %s failed (%s)\n", new HostPort(msgIn), msgIn.getString(Commands.MESSAGE));
+        }
 	}
 
 
@@ -94,9 +97,13 @@ public class ClientCommandProcessor{
 
 
 
-	private void connectPeerResponse(Document msgIn) {
-		// TODO Auto-generated method stub
-		
+	private void connectPeerResponse(Document msgIn) throws BadMessageException {
+        if (msgIn.getBoolean(Commands.STATUS)) {
+            System.out.format("Connection to %s OK\n", new HostPort(msgIn));
+        }
+        else {
+            System.out.format("Connection to %s failed (%s)\n", new HostPort(msgIn), msgIn.getString(Commands.MESSAGE));
+        }
 	}
 
 	private void connectPeerRequest(Document msgIn) throws BadMessageException {
@@ -112,20 +119,24 @@ public class ClientCommandProcessor{
 		if(status) {
 			msg.append(Commands.MESSAGE, "connected to peer");
 		}else {
-			msg.append(Commands.MESSAGE, "connection failed");
+			msg.append(Commands.MESSAGE, "could not connect");
 		}
 		this.responses.add(msg);
 		
 	}
 
-
-
-	private void listPeersResponse(Document msgIn) {
-		// TODO Auto-generated method stub
-		
+	private void listPeersResponse(Document msgIn) throws BadMessageException {
+        List<Document> peerList = msgIn.getListOfDocuments(Commands.PEERS);
+		for (Document peer : peerList) {
+		    System.out.println(new HostPort(peer));
+        }
+		if (peerList.size() == 1) {
+            System.out.format("Total 1 peer connected\n");
+        }
+		else {
+            System.out.format("Total %d peers connected\n", peerList.size());
+        }
 	}
-
-
 
 	private void listPeersRequest(Document msgIn) {
 		Document msg = new Document();

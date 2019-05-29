@@ -57,12 +57,6 @@ public class ClientServer extends Server {
     public ArrayList<Document> getPeerHostPorts() {
         return mainServer.getPeerHostPorts();
     }
-    
-
-    public Boolean connectPeers(List<HostPort> peers) {
-    	return mainServer.connectPeers(peers);
-    }
-    
 
 	public Boolean disconnectPeer(HostPort peer) {
 		return mainServer.disconnectPeer(peer);
