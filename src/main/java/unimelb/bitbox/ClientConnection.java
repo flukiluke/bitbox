@@ -10,49 +10,38 @@ import unimelb.bitbox.util.SSH;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Base64;
-
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
 
 public class ClientConnection extends Connection {
     private Socket clientSocket;
     private BufferedWriter outStream;
     private BufferedReader inStream;
-    private CmdLineArgs clientCommand;
+    private CmdLineArgs clientArgs;
     private ClientCommandProcessor clientCommandProcessor;
     private byte[] secretKey;
 
     /**
-     * This constructor initiates a connection to a peer. It does not return until
-     * the connection is established. Starts a new thread once connection is
-     * established to handle communications.
+     * Connection from client to peer. Starts a new thread.
      *
-     * @param server        An instance of the main server object
-     * @param remoteAddress The address/port target to connect to
+     * @param socket     A socket connected to the peer
+     * @param clientArgs Arguments passed to the client
      */
-    public ClientConnection(Socket socket, CmdLineArgs clientCommand) {
+    public ClientConnection(Socket socket, CmdLineArgs clientArgs) {
         clientCommandProcessor = new ClientCommandProcessor();
         isIncomingConnection = false;
-        this.clientCommand = clientCommand;
+        this.clientArgs = clientArgs;
         clientSocket = socket;
-        log.info("Start new IO thread for outgoing peer at " + socket.getRemoteSocketAddress());
-        //this.commandProcessor = new CommandProcessor(server.fileSystemManager);
+        log.info("Start new client thread for peer at " + socket.getRemoteSocketAddress());
         this.setDaemon(true);
-        //server.registerNewConnection(this);
         start();
     }
 
     /**
-     * This is for accepting incoming connections.
+     * This is for accepting incoming connections from clients.
      *
-     * @param clientSocket A socket from accept() connected to the peer
+     * @param clientSocket A socket from accept() connected to the client
      */
     public ClientConnection(ClientServer server, Socket clientSocket) {
         clientCommandProcessor = new ClientCommandProcessor(server);
@@ -69,7 +58,7 @@ public class ClientConnection extends Connection {
 
 
     /**
-     * Main loop for IO thread. Reads message from peer then sends responses.
+     * Perform main transaction between peer and client
      */
     public void run() {
         if (!initialise()) {
@@ -79,18 +68,9 @@ public class ClientConnection extends Connection {
         connectionState = ConnectionState.CONNECTED;
         try {
             if (!isIncomingConnection) {
-                //TODO send client command
-                //sendEncryptedMessage("lol");
-                sendEncryptedClientCommand();
+                sendClientCommand();
             }
-            ArrayList<Document> msgOut;
             Document msgIn = receiveMessageFromPeer();
-            msgIn = decryptMessage(msgIn);
-
-            log.info(msgIn.getString(Commands.COMMAND));
-
-            //TODO clean code up a little/improve logging and test with elanors code
-
             if (msgIn.getString(Commands.COMMAND).equals(Commands.INVALID_PROTOCOL)) {
                 // That's unfortunate
                 log.severe("Peer reckons we sent an invalid message. Disconnecting from " + this.remoteAddress);
@@ -98,15 +78,14 @@ public class ClientConnection extends Connection {
                 connectionState = ConnectionState.DONE;
                 return;
             }
-
-            msgOut = clientCommandProcessor.handleMessage(msgIn);
-            for (Document msg : msgOut) {
-                sendEncryptedMessage(msg);
+            ArrayList<Document> msgsOut;
+            msgsOut = clientCommandProcessor.handleMessage(msgIn);
+            for (Document msg : msgsOut) {
+                sendMessageToPeer(msg);
             }
         } catch (IOException e) {
             log.severe("Communication to " + this.remoteAddress + " failed, IO thread exiting (" + e.getMessage() + ")");
         } catch (BadMessageException e) {
-            log.info("error 2");
             terminateConnection(e.getMessage());
         }
         connectionState = ConnectionState.DONE;
@@ -121,144 +100,93 @@ public class ClientConnection extends Connection {
                     "UTF-8"));
 
             if (isIncomingConnection) {
-                success = receiveAuthResponse();
+                success = authResponse();
             } else {
-                success = sendAuthRequest(clientCommand);
+                success = authRequest();
             }
             if (!success) {
                 log.severe("Did not connect to " + this.remoteAddress);
                 return false;
             }
         } catch (IOException e) {
-            log.severe("Setting up new peer connection failed, IO thread for "
+            log.severe("Setting up client connection failed, IO thread for "
                     + this.remoteAddress + " exiting");
             return false;
-        } catch (Exception e) {
-            log.info("error 1");
+        } catch (BadMessageException | GeneralSecurityException e) {
             terminateConnection(e.getMessage());
             return false;
         }
         return true;
     }
 
-
-    private void sendEncryptedMessage(String input) throws IOException {
+    private void sendClientCommand() throws IOException {
         Document doc = new Document();
-        String encrypted = "";
-        try {
-            encrypted = AES.encrypt(input, secretKey);
-        } catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException
-                | BadPaddingException | UnsupportedEncodingException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        doc.append(Commands.PAYLOAD, encrypted);
-        sendMessageToPeer(doc);
-        log.info("Sent message to peer: " + input);
-    }
-
-
-    private void sendEncryptedMessage(Document doc) throws IOException {
-        sendEncryptedMessage(doc.toJson().toString());
-    }
-
-
-    private void sendEncryptedClientCommand() throws IOException {
-        Document doc = new Document();
-        switch (clientCommand.getCommand()) {
+        switch (clientArgs.getCommand()) {
             case Commands.LIST_PEERS:
                 doc.append(Commands.COMMAND, Commands.LIST_PEERS_REQUEST);
                 break;
 
             case Commands.CONNECT_PEER:
                 doc.append(Commands.COMMAND, Commands.CONNECT_PEER_REQUEST);
-                HostPort s1 = new HostPort(clientCommand.getServer());
+                HostPort s1 = new HostPort(clientArgs.getPeer());
                 doc.append(Commands.HOST, s1.host);
                 doc.append(Commands.PORT, s1.port);
                 break;
 
             case Commands.DISCONNECT_PEER:
                 doc.append(Commands.COMMAND, Commands.DISCONNECT_PEER_REQUEST);
-                HostPort s2 = new HostPort(clientCommand.getServer());
+                HostPort s2 = new HostPort(clientArgs.getPeer());
                 doc.append(Commands.HOST, s2.host);
                 doc.append(Commands.PORT, s2.port);
                 break;
         }
-        sendEncryptedMessage(doc);
+        sendMessageToPeer(doc);
     }
 
 
-    private void printEncryptedMessage(Document doc) throws IOException, BadMessageException {
-        String encrypted = doc.getString(Commands.PAYLOAD);
-        String decrypted;
-        decrypted = AES.decrypt(encrypted, secretKey);
-        log.info("did it work?: " + decrypted);
-    }
-
-    private Document decryptMessage(Document doc) throws IOException, BadMessageException {
-        String encrypted = doc.getString(Commands.PAYLOAD);
-        String decrypted;
-        decrypted = AES.decrypt(encrypted, secretKey);
-        return Document.parse(decrypted);
-    }
 
 
     /**
-     * Perform the handshake as the initiating party.
+     * Perform the authentication challenge as the initiating party.
      *
-     * @param clientCommand
-     * @return false if we got CONNECTION_REFUSED, true otherwise
+     * @return false on failure
      * @throws IOException         If communication fails
      * @throws BadMessageException If we received an incorrect message
      */
-    private boolean sendAuthRequest(CmdLineArgs clientCommand) throws IOException,
-            BadMessageException {
+    private boolean authRequest() throws IOException, BadMessageException {
         Document doc = new Document();
         doc.append(Commands.COMMAND, Commands.AUTH_REQUEST);
-        doc.append(Commands.IDENTITY, clientCommand.getIdentity());
+        doc.append(Commands.IDENTITY, clientArgs.getIdentity());
         sendMessageToPeer(doc);
 
         Document reply = receiveMessageFromPeer();
-        if (reply.getString(Commands.COMMAND).equals(Commands.AUTH_RESPONSE)) {
-            if (!reply.getBoolean(Commands.STATUS)) {
-                return false;
-            }
-        } else if (!reply.getString(Commands.COMMAND).equals(Commands.AUTH_RESPONSE)) {
+        if (!reply.getString(Commands.COMMAND).equals(Commands.AUTH_RESPONSE)) {
             throw new BadMessageException("Peer " + this.remoteAddress + " did not respond with " +
                     "auth response " +
                     "response, responded with " + reply.getString(Commands.COMMAND));
         }
+        if (!reply.getBoolean(Commands.STATUS)) {
+            return false;
+        }
 
         try {
             secretKey = SSH.decrypt(reply.getString(Commands.AES128));
-        } catch (Exception e) {
-            // TODO Auto-generated catch block
+        } catch (GeneralSecurityException e) {
             throw new BadMessageException("Secret key not encrypted correctly");
         }
-
         return true;
     }
 
     /**
      * Perform the client auth as the receiving party.
      *
-     * @return false if we sent CONNECTION_REFUSED because we are at maximumIncommingConnections,
-     * true otherwise
+     * @return false on failure
      * @throws IOException
      * @throws BadMessageException
-     * @throws InvalidKeySpecException
-     * @throws BadPaddingException
-     * @throws IllegalBlockSizeException
-     * @throws InvalidAlgorithmParameterException
-     * @throws NoSuchPaddingException
-     * @throws NoSuchAlgorithmException
-     * @throws InvalidKeyException
-     * @throws Exception
+     * @throws GeneralSecurityException
      */
-    private boolean receiveAuthResponse() throws BadMessageException, IOException,
-            InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException,
-            InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException,
-            InvalidKeySpecException {
+    private boolean authResponse() throws BadMessageException, IOException,
+            GeneralSecurityException {
         Document request = receiveMessageFromPeer();
         if (!request.getString(Commands.COMMAND).equals(Commands.AUTH_REQUEST)) {
             throw new BadMessageException("Client " + this.remoteAddress + " did not open with " +
@@ -271,7 +199,6 @@ public class ClientConnection extends Connection {
         for (String key : Configuration.getConfigurationValue("authorized_keys").split(",")) {
             publicKey = key;
             String identity = key.split(" ")[2];
-            log.info("looking for: " + request.get("identity") + ", found: " + identity);
             if (identity.equals(request.get("identity"))) {
                 foundKey = true;
                 break;
@@ -282,6 +209,7 @@ public class ClientConnection extends Connection {
             reply.append(Commands.COMMAND, Commands.AUTH_RESPONSE);
             reply.append(Commands.STATUS, false);
             reply.append(Commands.MESSAGE, "public key not found");
+            log.warning("Did not find a matching key for identity " + request.get("identity"));
         } else {
             reply.append(Commands.COMMAND, Commands.AUTH_RESPONSE);
             reply.append(Commands.STATUS, true);
@@ -290,8 +218,6 @@ public class ClientConnection extends Connection {
             secretKey = AES.generateSecretKey();
             String encryptedKey = Base64.getEncoder().encodeToString(SSH.encrypt(publicKey,
                     secretKey));
-            log.info("key" + secretKey);
-            log.info("encrypted" + encryptedKey);
             reply.append(Commands.AES128, encryptedKey);
         }
         sendMessageToPeer(reply);
@@ -307,12 +233,32 @@ public class ClientConnection extends Connection {
     }
 
     protected void sendMessageToPeer(Document message) throws IOException {
+        String content;
+        if (connectionState == ConnectionState.CONNECTED) {
+            content = encryptMessage(message);
+        } else {
+            content = message.toJson() + "\n";
+        }
         synchronized (outStream) {
-            outStream.write(message.toJson() + "\n");
+            outStream.write(content);
             outStream.flush();
         }
         log.info("Sent message to peer: " + message);
     }
+
+    private String encryptMessage(Document message) throws IOException {
+        Document doc = new Document();
+        String encrypted;
+        try {
+            encrypted = AES.encrypt(message.toJson() + "\n", secretKey);
+        }
+        catch (GeneralSecurityException e) {
+            throw new IOException("Security error");
+        }
+        doc.append(Commands.PAYLOAD, encrypted);
+        return doc.toJson() + "\n";
+    }
+
 
     protected Document receiveMessageFromPeer() throws BadMessageException, IOException {
         String input;
@@ -323,7 +269,17 @@ public class ClientConnection extends Connection {
             throw new IOException();
         }
         Document doc = Document.parse(input);
+        if (connectionState == ConnectionState.CONNECTED) {
+            doc = decryptMessage(doc);
+        }
         log.info("Received message from peer: " + doc);
         return doc;
+    }
+
+    private Document decryptMessage(Document doc) throws BadMessageException {
+        String encrypted = doc.getString(Commands.PAYLOAD);
+        String decrypted;
+        decrypted = AES.decrypt(encrypted, secretKey);
+        return Document.parse(decrypted);
     }
 }

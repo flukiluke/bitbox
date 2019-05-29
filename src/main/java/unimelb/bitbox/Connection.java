@@ -1,6 +1,5 @@
 package unimelb.bitbox;
 
-import unimelb.bitbox.util.CmdLineArgs;
 import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.FileSystemManager;

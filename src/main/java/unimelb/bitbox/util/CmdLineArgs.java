@@ -11,15 +11,16 @@ public class CmdLineArgs {
 
 	@Option(required = true, name = "-c", aliases = {"--command"}, usage = "Command")
 	private String command;
-	
-	@Option(required = true, name = "-p", usage = "Port number")
+
+    @Option(required = true, name = "-i", usage = "Identity")
+    private String identity;
+
+    @Option(required = true, name = "-s", usage = "Server to connect to")
+    private String server;
+
+	@Option(name = "-p", usage = "Peer argument to command")
 	private String peer;
-	
-	@Option(required = true, name = "-i", usage = "Identity")
-	private String identity;
-	
-	@Option(required = false, name = "-s", usage = "Host Address")
-	private String server = "localhost:4444";
+
 	
 	public String getCommand() {
 		return command;

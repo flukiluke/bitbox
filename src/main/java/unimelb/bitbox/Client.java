@@ -18,33 +18,17 @@ import java.util.logging.Logger;
  */
 public class Client {
     private static Logger log = Logger.getLogger(Client.class.getName());
-    private static ClientConnection connection;
 
-    public static void main(String[] args) throws IOException, NumberFormatException, NoSuchAlgorithmException, InterruptedException {
+    public static void main(String[] args) throws IOException, NumberFormatException, InterruptedException {
         System.setProperty("java.util.logging.SimpleFormatter.format",
                 //"[%1$tc] %2$s %4$s: %5$s%n");
                 "%5$s%n");
-        log.info("BitBox Peer starting...");
+        log.info("BitBox Client starting...");
 
         Configuration.getConfiguration();
-        CmdLineArgs clientCommand = Configuration.parseClientCmdLineArgs(args);
-        
-        connect(clientCommand);
+        CmdLineArgs cmdLineArgs = Configuration.parseClientCmdLineArgs(args);
+        HostPort server = new HostPort(cmdLineArgs.getServer());
+        ClientConnection connection = new ClientConnection(new Socket(server.host, server.port), cmdLineArgs);
         connection.join();
-		
-        
-        
-        /* This main function returns once we've created initial connections.
-         * The program will not exit until the server thread finishes.
-         */
     }
-    
-
-
-	public static void connect(CmdLineArgs clientCommand) throws UnknownHostException, IOException, InterruptedException {
-		// TODO Auto-generated method stub
-		HostPort peer = new HostPort(clientCommand.getPeer());
-        Socket socket = new Socket(peer.host, peer.port);
-        connection = new ClientConnection(socket, clientCommand);
-	}
 }

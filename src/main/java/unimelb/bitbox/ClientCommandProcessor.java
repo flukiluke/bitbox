@@ -1,15 +1,9 @@
 package unimelb.bitbox;
 
-import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
-import unimelb.bitbox.util.FileSystemManager;
 import unimelb.bitbox.util.HostPort;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.logging.Logger;
 
 /**
@@ -20,13 +14,12 @@ import java.util.logging.Logger;
  * @author TransfictionRailways
  */
 public class ClientCommandProcessor{
-    private FileSystemManager fileSystemManager;
     private ArrayList<Document> responses;
-	private Server server;
+	private ClientServer server;
     private static Logger log = Logger.getLogger(Server.class.getName());
 
 
-    public ClientCommandProcessor(Server server) {
+    public ClientCommandProcessor(ClientServer server) {
         this.server = server;
     }
     
@@ -69,20 +62,13 @@ public class ClientCommandProcessor{
             case Commands.DISCONNECT_PEER_RESPONSE:
                 disconnectPeerResponse(msgIn);
                 break;
-
-            /*
-             * What about other responses from the peer? We don't bother handling them because we
-             * don't care about their contents. Furthermore, it is not a problem for us if a peer send a response
-             * without us having issued a request - we will be polite and not terminate the connection with
-             * INVALID_PROTOCOL in an attempt to ensure good support for peers written by other people.
-             */
         }
         return this.responses;
     }
 
     private void disconnectPeerResponse(Document msgIn) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 
@@ -113,17 +99,12 @@ public class ClientCommandProcessor{
 		
 	}
 
-
-
 	private void connectPeerRequest(Document msgIn) throws BadMessageException {
 		Document msg = new Document();
 		String host = msgIn.getString(Commands.HOST);
 		int port = (int) msgIn.getLong(Commands.PORT);
 		HostPort peer = new HostPort(host, port);
-		ArrayList<HostPort> peers = new ArrayList<>();
-		peers.add(peer);
-		
-		Boolean status = server.connectPeers(peers);
+		Boolean status = server.connectPeerSync(peer);
 		msg.append(Commands.COMMAND, Commands.CONNECT_PEER_RESPONSE);
 		msg.append(Commands.HOST, host);
 		msg.append(Commands.PORT, port);

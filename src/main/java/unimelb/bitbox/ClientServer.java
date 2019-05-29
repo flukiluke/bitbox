@@ -2,16 +2,14 @@ package unimelb.bitbox;
 
 import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
-import unimelb.bitbox.util.FileSystemManager;
 import unimelb.bitbox.util.HostPort;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class ClientServer extends Server {
     ServerSocket serverSocket;
@@ -21,10 +19,9 @@ public class ClientServer extends Server {
      * Create server thread with a list of already-established connections
      * @param server 
      * @throws NumberFormatException
-     * @throws NoSuchAlgorithmException
      * @throws IOException
      */
-    public ClientServer(Server server) throws NumberFormatException, NoSuchAlgorithmException, IOException {
+    public ClientServer(Server server) throws NumberFormatException, IOException {
     	mainServer = server;
     	serverSocket = new ServerSocket(Integer.parseInt(Configuration.getConfigurationValue(Commands.CLIENT_PORT)));
     }
@@ -70,7 +67,23 @@ public class ClientServer extends Server {
 	public Boolean disconnectPeer(HostPort peer) {
 		return mainServer.disconnectPeer(peer);
 	}
-    
 
 
+    public Boolean connectPeerSync(HostPort peer) {
+        Connection connection;
+        try {
+            InetSocketAddress remoteAddress = new InetSocketAddress(peer.host, peer.port);
+            if (Peer.udpMode) {
+                connection = new UDPConnection((UDPServer) mainServer, remoteAddress, false);
+            } else {
+                connection = new TCPConnection((TCPServer) mainServer, remoteAddress);
+            }
+            while (connection.connectionState == Connection.ConnectionState.CONNECTING) {
+                Thread.sleep(100);
+            }
+            return connection.connectionState == Connection.ConnectionState.CONNECTED;
+        }catch(Exception e) {
+            return false;
+        }
+    }
 }
