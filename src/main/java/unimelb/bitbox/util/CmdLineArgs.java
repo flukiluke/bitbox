@@ -15,7 +15,7 @@ public class CmdLineArgs {
 	@Option(required = true, name = "-p", usage = "Port number")
 	private String peer;
 	
-	@Option(required = true, name = "-i", usage = "Idenity")
+	@Option(required = true, name = "-i", usage = "Identity")
 	private String identity;
 	
 	@Option(required = false, name = "-s", usage = "Host Address")
