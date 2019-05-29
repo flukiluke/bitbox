@@ -9,7 +9,6 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.List;
 
 public class ClientServer extends Server {
     ServerSocket serverSocket;
@@ -73,6 +72,7 @@ public class ClientServer extends Server {
                 connection = new TCPConnection((TCPServer) mainServer, remoteAddress);
             }
             while (connection.connectionState == Connection.ConnectionState.CONNECTING) {
+                // Connection is asynchronous but we want an answer... so we wait for one
                 Thread.sleep(100);
             }
             return connection.connectionState == Connection.ConnectionState.CONNECTED;

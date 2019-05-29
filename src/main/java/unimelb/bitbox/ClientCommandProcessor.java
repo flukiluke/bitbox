@@ -5,7 +5,6 @@ import unimelb.bitbox.util.HostPort;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
 
 /**
  * Logic for acting on commands received from a peer.
