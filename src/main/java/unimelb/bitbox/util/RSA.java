@@ -35,11 +35,11 @@ import static com.google.common.collect.Iterables.get;
 import static com.google.common.collect.Iterables.size;
 
 
-public class SSH {
+public class RSA {
     private static final String SSH_MARKER = "ssh-rsa";
 
     private static ByteSource supplier;
-    private static Logger log = Logger.getLogger(SSH.class.getName());
+    private static Logger log = Logger.getLogger(RSA.class.getName());
 
     public static byte[] encrypt(String keyString, byte[] bytes) throws GeneralSecurityException {
         SSHEncodedToRSAPublicConverter(keyString);
@@ -113,7 +113,7 @@ public class SSH {
             stream = new ByteArrayInputStream(Base64.getDecoder().decode(get(parts, 1)));
             String marker = new String(readLengthFirst(stream));
             checkArgument(SSH_MARKER.equals(marker), "looking for marker %s but received %s",
-                    SSH.SSH_MARKER, marker);
+                    RSA.SSH_MARKER, marker);
             BigInteger publicExponent = new BigInteger(readLengthFirst(stream));
             BigInteger modulus = new BigInteger(readLengthFirst(stream));
             RSAPublicKeySpec keySpec = new RSAPublicKeySpec(modulus, publicExponent);

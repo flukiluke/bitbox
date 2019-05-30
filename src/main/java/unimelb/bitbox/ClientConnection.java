@@ -5,7 +5,7 @@ import unimelb.bitbox.util.CmdLineArgs;
 import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.HostPort;
-import unimelb.bitbox.util.SSH;
+import unimelb.bitbox.util.RSA;
 
 import java.io.*;
 import java.net.InetSocketAddress;
@@ -170,7 +170,7 @@ public class ClientConnection extends Connection {
         }
 
         try {
-            secretKey = SSH.decrypt(reply.getString(Commands.AES128));
+            secretKey = RSA.decrypt(reply.getString(Commands.AES128));
         } catch (GeneralSecurityException e) {
             throw new BadMessageException("Secret key not encrypted correctly");
         }
@@ -216,7 +216,7 @@ public class ClientConnection extends Connection {
             reply.append(Commands.MESSAGE, "public key found");
 
             secretKey = AES.generateSecretKey();
-            String encryptedKey = Base64.getEncoder().encodeToString(SSH.encrypt(publicKey,
+            String encryptedKey = Base64.getEncoder().encodeToString(RSA.encrypt(publicKey,
                     secretKey));
             reply.append(Commands.AES128, encryptedKey);
         }
