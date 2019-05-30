@@ -48,7 +48,7 @@ public class ClientConnection extends Connection {
         isIncomingConnection = true;
         this.remoteAddress = new InetSocketAddress(clientSocket.getInetAddress(),
                 clientSocket.getPort());
-        log.info("Start new IO thread for incoming peer at " + this.remoteAddress);
+        log.info("Start new IO thread for incoming client at " + this.remoteAddress);
         this.server = server;
         this.commandProcessor = new CommandProcessor(server.fileSystemManager);
         this.clientSocket = clientSocket;

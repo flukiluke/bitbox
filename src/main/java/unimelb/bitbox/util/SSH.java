@@ -9,13 +9,13 @@ import java.security.*;
 import java.security.spec.KeySpec;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.logging.Logger;
+import java.util.Base64;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 
-import org.bouncycastle.util.encoders.Base64;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -56,7 +56,7 @@ public class SSH {
     public static byte[] decrypt(String input) throws InvalidKeyException,
             NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException,
             BadPaddingException {
-        return decrypt(Base64.decode(input.getBytes()));
+        return decrypt(Base64.getDecoder().decode(input.getBytes()));
     }
 
     public static byte[] decrypt(byte[] data) throws NoSuchAlgorithmException,
@@ -110,7 +110,7 @@ public class SSH {
                     Charsets.UTF_8));
             checkArgument(size(parts) >= 2 && SSH_MARKER.equals(get(parts, 0)), "bad format, " +
                     "should be: ssh-rsa AAAB3....");
-            stream = new ByteArrayInputStream(Base64.decode(get(parts, 1)));
+            stream = new ByteArrayInputStream(Base64.getDecoder().decode(get(parts, 1)));
             String marker = new String(readLengthFirst(stream));
             checkArgument(SSH_MARKER.equals(marker), "looking for marker %s but received %s",
                     SSH.SSH_MARKER, marker);
