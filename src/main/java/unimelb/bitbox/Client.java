@@ -3,16 +3,15 @@ package unimelb.bitbox;
 import unimelb.bitbox.util.CmdLineArgs;
 import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.HostPort;
+
 import java.io.IOException;
 import java.net.Socket;
-import java.net.UnknownHostException;
-import java.security.NoSuchAlgorithmException;
 import java.util.logging.Logger;
 
 /**
- * Main class for the BitBox peer.
- *
- * Handles initial outbound connections and starting other components.
+ * Main class for the BitBox client.
+ * <p>
+ * Connects to a peer and executes a command then exits.
  *
  * @author TransfictionRailways
  */

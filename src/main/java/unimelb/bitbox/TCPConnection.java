@@ -1,7 +1,6 @@
 package unimelb.bitbox;
 
 import unimelb.bitbox.util.Document;
-import unimelb.bitbox.util.HostPort;
 
 import java.io.*;
 import java.net.InetSocketAddress;
@@ -17,7 +16,7 @@ public class TCPConnection extends Connection {
      * the connection is established. Starts a new thread once connection is
      * established to handle communications.
      *
-     * @param server An instance of the main server object
+     * @param server        An instance of the main server object
      * @param remoteAddress The address/port target to connect to
      */
     public TCPConnection(TCPServer server, InetSocketAddress remoteAddress) {
@@ -64,7 +63,7 @@ public class TCPConnection extends Connection {
             } else {
                 success = sendHandshake();
             }
-            if(!success) {
+            if (!success) {
                 log.severe("Did not connect to " + this.remoteAddress);
                 return false;
             }
@@ -82,8 +81,7 @@ public class TCPConnection extends Connection {
     protected void closeConnection() {
         try {
             clientSocket.close();
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             // Ignore
         }
     }

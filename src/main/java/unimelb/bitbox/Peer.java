@@ -13,7 +13,7 @@ import java.util.logging.Logger;
 
 /**
  * Main class for the BitBox peer.
- *
+ * <p>
  * Handles initial outbound connections and starting other components.
  *
  * @author TransfictionRailways

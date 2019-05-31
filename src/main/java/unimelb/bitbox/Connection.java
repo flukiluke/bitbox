@@ -13,8 +13,8 @@ import java.util.logging.Logger;
 
 /**
  * Thread class created to handle network IO with a peer. One instance per peer.
- * This is the *only* class allowed to communicate directly to peers.
- *
+ * This class's children are the *only* classes allowed to communicate directly to peers.
+ * <p>
  * Also handles the initial protocol handshake and fatal errors in peer communications.
  *
  * @author TransfictionRailways
@@ -26,9 +26,9 @@ public abstract class Connection extends Thread {
     public HostPort remoteHostPort; // This is the address/port the peer tells us
     public InetSocketAddress remoteAddress; // The is the address/port the connection is actually coming from
     public boolean isIncomingConnection;
-    public boolean isClient = false;
 
-    public enum ConnectionState { CONNECTING, CONNECTED, DONE }
+    public enum ConnectionState {CONNECTING, CONNECTED, DONE}
+
     public ConnectionState connectionState = ConnectionState.CONNECTING;
 
     /**
@@ -38,6 +38,7 @@ public abstract class Connection extends Thread {
 
     /**
      * Send message to peer.
+     *
      * @param message The JSON Document to be sent.
      * @throws IOException If communication fails.
      */
@@ -45,8 +46,9 @@ public abstract class Connection extends Thread {
 
     /**
      * Reads message from peer; blocks on read.
+     *
      * @return Message read from peer.
-     * @throws IOException If communication fails.
+     * @throws IOException         If communication fails.
      * @throws BadMessageException If the message is not well-formed.
      */
     protected abstract Document receiveMessageFromPeer() throws BadMessageException, IOException;
@@ -85,7 +87,8 @@ public abstract class Connection extends Thread {
                 }
             }
         } catch (IOException e) {
-            log.severe("Communication to " + this.remoteAddress + " failed, IO thread exiting (" + e.getMessage() +")");
+            log.severe("Communication to " + this.remoteAddress + " failed, IO thread exiting (" + e.getMessage() +
+                    ")");
         } catch (BadMessageException e) {
             terminateConnection(e.getMessage());
         }
@@ -95,8 +98,9 @@ public abstract class Connection extends Thread {
 
     /**
      * Perform the handshake as the initiating party.
+     *
      * @return false if we got CONNECTION_REFUSED, true otherwise
-     * @throws IOException If communication fails
+     * @throws IOException         If communication fails
      * @throws BadMessageException If we received an incorrect message
      */
     protected boolean sendHandshake() throws IOException, BadMessageException {
@@ -123,14 +127,15 @@ public abstract class Connection extends Thread {
 
     /**
      * Perform the handshake as the receiving party.
+     *
      * @return false if we sent CONNECTION_REFUSED because we are at maximumIncommingConnections, true otherwise
-     * @throws IOException If communication fails
+     * @throws IOException         If communication fails
      * @throws BadMessageException If we received an incorrect message
      */
     protected boolean receiveHandshake() throws IOException, BadMessageException {
         Document request = receiveMessageFromPeer();
         if (!request.getString(Commands.COMMAND).equals(Commands.HANDSHAKE_REQUEST)) {
-        	throw new BadMessageException("Peer " + this.remoteAddress + " did not open with handshake request");
+            throw new BadMessageException("Peer " + this.remoteAddress + " did not open with handshake request");
         }
         remoteHostPort = new HostPort(request.getDocument(Commands.HOST_PORT));
         if (server.countIncomingConnections() >=
@@ -147,6 +152,7 @@ public abstract class Connection extends Thread {
 
     /**
      * Inform the peer about a file-related event (i.e create/modify/delete) on our file system.
+     *
      * @param fileSystemEvent The file event that occurred
      * @throws IOException If communication fails
      */
@@ -172,6 +178,7 @@ public abstract class Connection extends Thread {
 
     /**
      * Inform the peer about a directory-related event (i.e create/delete) on our file system.
+     *
      * @param fileSystemEvent the directory event that occurred
      * @throws IOException if communication fails
      */
@@ -211,6 +218,7 @@ public abstract class Connection extends Thread {
 
     /**
      * Send the INVALID_PROTOCOL message to a peer and disconnect.
+     *
      * @param errorMessage Human-readable explanation of why they are being disconnected
      */
     protected void terminateConnection(String errorMessage) {
@@ -221,8 +229,7 @@ public abstract class Connection extends Thread {
         try {
             sendMessageToPeer(doc);
             closeConnection();
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             // At this point just give up - connection is getting closed anyway
         }
     }

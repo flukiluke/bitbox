@@ -10,34 +10,39 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 
+/**
+ * Handle incoming connections from clients.
+ *
+ * @author TransficitonRailways
+ */
 public class ClientServer extends Server {
-    ServerSocket serverSocket;
-    Server mainServer;
+    private ServerSocket serverSocket;
+    private Server mainServer;
 
     /**
      * Create server thread with a list of already-established connections
-     * @param server 
-     * @throws NumberFormatException
-     * @throws IOException
+     *
+     * @param server The main peer-to-peer server instance
+     * @throws IOException if binding to the port failed
      */
-    public ClientServer(Server server) throws NumberFormatException, IOException {
-    	mainServer = server;
-    	serverSocket = new ServerSocket(Integer.parseInt(Configuration.getConfigurationValue(Commands.CLIENT_PORT)));
+    public ClientServer(Server server) throws IOException {
+        mainServer = server;
+        serverSocket = new ServerSocket(Integer.parseInt(Configuration.getConfigurationValue(Commands.CLIENT_PORT)));
     }
-    
+
+    @Override
     public void run() {
         try {
             mainLoop();
-        }
-        catch (IOException e) {
-            log.severe("Main server thread threw an exception, exiting: " + e.getMessage());
+        } catch (IOException e) {
+            log.severe("Client server thread threw an exception, exiting: " + e.getMessage());
         }
     }
 
     /**
-     * Main loop for server thread. accept() an incoming connection and spawn a new IO thread to handle it.
-     * @throws IOException
+     * Main loop. Just chill here and wait for incoming connections so we can spawn a connection thread for them.
      */
+    @Override
     public void mainLoop() throws IOException {
         while (true) {
             Socket clientSocket = serverSocket.accept();
@@ -45,23 +50,34 @@ public class ClientServer extends Server {
             registerNewConnection(connection);
         }
     }
-    
 
     /**
      * Compute a list of hostports for all peers, but only if:
-     *  - the connection has been initiated (i.e. handshake OK)
-     *  - the connection has a valid hostport
+     * - the connection has been initiated (i.e. handshake OK)
+     * - the connection has a valid hostport
+     *
      * @return List of Document hostports
      */
     public ArrayList<Document> getPeerHostPorts() {
         return mainServer.getPeerHostPorts();
     }
 
-	public Boolean disconnectPeer(HostPort peer) {
-		return mainServer.disconnectPeer(peer);
-	}
+    /**
+     * Request that a peer be disconnected
+     *
+     * @param peer Connection details of peer
+     * @return true if disconnection succeeded
+     */
+    public Boolean disconnectPeer(HostPort peer) {
+        return mainServer.disconnectPeer(peer);
+    }
 
-
+    /**
+     * Connect to a new peer *synchronously*. That is, wait for the connection to succeed or fail before returning.
+     *
+     * @param peer Connection details of peer to connect to
+     * @return true if connection succeeded
+     */
     public Boolean connectPeerSync(HostPort peer) {
         Connection connection;
         try {
@@ -76,7 +92,7 @@ public class ClientServer extends Server {
                 Thread.sleep(100);
             }
             return connection.connectionState == Connection.ConnectionState.CONNECTED;
-        }catch(Exception e) {
+        } catch (Exception e) {
             return false;
         }
     }

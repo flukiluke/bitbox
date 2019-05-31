@@ -17,7 +17,7 @@ public class UDPConnection extends Connection {
      * the connection is established. Starts a new thread once connection is
      * established to handle communications.
      *
-     * @param server An instance of the main server object
+     * @param server        An instance of the main server object
      * @param remoteAddress The address/port target to connect to
      */
     public UDPConnection(UDPServer server, InetSocketAddress remoteAddress, boolean isIncomingConnection) {
@@ -40,7 +40,7 @@ public class UDPConnection extends Connection {
             } else {
                 success = sendHandshake();
             }
-            if(!success) {
+            if (!success) {
                 log.severe("Did not connect to " + this.remoteAddress);
                 return false;
             }
@@ -65,8 +65,7 @@ public class UDPConnection extends Connection {
             if (doc.getString(Commands.COMMAND).contains("REQUEST")) {
                 activeMessages.add(message);
             }
-        }
-        catch (BadMessageException e) {
+        } catch (BadMessageException e) {
             // ignore
         }
         // log.info("Sent message to peer: " + doc);
@@ -90,8 +89,7 @@ public class UDPConnection extends Connection {
                 }
                 input = incomingMessages.remove(0);
             }
-        }
-        catch (InterruptedException e) {
+        } catch (InterruptedException e) {
             return null;
         }
         Document doc = Document.parse(input);
@@ -105,7 +103,6 @@ public class UDPConnection extends Connection {
                 }
             }
         }
-        //log.info(activeMessages.size() + " in transit");
         return doc;
     }
 
@@ -134,11 +131,12 @@ public class UDPConnection extends Connection {
             this.packet = packet;
             this.attemptNumber = 1;
             lastSendTime = System.currentTimeMillis();
-            ((UDPServer)server).send(packet);
+            ((UDPServer) server).send(packet);
         }
 
         public void resendIfNeeded() throws IOException {
-            if (lastSendTime > System.currentTimeMillis() - Integer.parseInt(Configuration.getConfigurationValue("udpTimeout"))) {
+            if (lastSendTime > System.currentTimeMillis() - Integer.parseInt(Configuration.getConfigurationValue(
+                    "udpTimeout"))) {
                 return;
             }
             if (attemptNumber++ > Integer.parseInt(Configuration.getConfigurationValue("udpRetries"))) {

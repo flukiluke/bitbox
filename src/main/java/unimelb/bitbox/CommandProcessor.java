@@ -13,7 +13,7 @@ import java.util.logging.Logger;
 
 /**
  * Logic for acting on commands received from a peer.
- *
+ * <p>
  * Handles generating responses and driving the file system manager to read/write data.
  *
  * @author TransfictionRailways
@@ -30,6 +30,7 @@ public class CommandProcessor {
 
     /**
      * Main entry point. Parses a message from the client and acts upon it.
+     *
      * @param msgIn The message from the client
      * @return A (possibly empty) list of replies to be sent to the client
      * @throws BadMessageException If the client's message is malformed
@@ -78,6 +79,7 @@ public class CommandProcessor {
 
     /**
      * Handle request to create a file and start requesting bytes for that file if successful.
+     *
      * @param msgIn The peer's request for file creation
      * @throws BadMessageException If the request is malformed
      */
@@ -100,7 +102,7 @@ public class CommandProcessor {
             try {
                 boolean status = fileSystemManager.createFileLoader(pathName, md5, fileSize, lastModified);
                 if (status) {
-                    if(fileSystemManager.checkShortcut(pathName)) {
+                    if (fileSystemManager.checkShortcut(pathName)) {
                         fileRelatedReply(Commands.FILE_CREATE_RESPONSE, fileDescriptor, pathName,
                                 true, "transfer complete using local data");
                         return;
@@ -124,6 +126,7 @@ public class CommandProcessor {
 
     /**
      * Handle request to modify a file and start requesting bytes for that file if successful.
+     *
      * @param msgIn The peer's request for file modification
      * @throws BadMessageException If the request is malformed
      */
@@ -146,7 +149,7 @@ public class CommandProcessor {
             try {
                 boolean status = fileSystemManager.modifyFileLoader(pathName, md5, lastModified);
                 if (status) {
-                    if(fileSystemManager.checkShortcut(pathName)) {
+                    if (fileSystemManager.checkShortcut(pathName)) {
                         fileRelatedReply(Commands.FILE_MODIFY_RESPONSE, fileDescriptor, pathName,
                                 true, "transfer complete using local data");
                         return;
@@ -170,6 +173,7 @@ public class CommandProcessor {
 
     /**
      * Handle request to delete a file and delete it if possible.
+     *
      * @param msgIn The peer's request for file deletion
      * @throws BadMessageException If the request is malformed
      */
@@ -200,6 +204,7 @@ public class CommandProcessor {
 
     /**
      * Handle request to create a directory and create it if possible.
+     *
      * @param msgIn The peer's request for directory creation
      * @throws BadMessageException If the request is malformed
      */
@@ -224,6 +229,7 @@ public class CommandProcessor {
 
     /**
      * Handle request to delete a directory and delete it if possible.
+     *
      * @param msgIn The peer's request for directory deletion
      * @throws BadMessageException If the request is malformed
      */
@@ -248,6 +254,7 @@ public class CommandProcessor {
 
     /**
      * Handle request for bytes from a file. Replies with the data if possible.
+     *
      * @param msgIn The peer's request for file data
      * @throws BadMessageException If the request is malformed
      */
@@ -285,6 +292,7 @@ public class CommandProcessor {
 
     /**
      * Accepts receipt of data from the peer as an answer to one of our requests.
+     *
      * @param msgIn The peer's response with file data
      * @throws BadMessageException If the response is malformed
      */
@@ -312,7 +320,7 @@ public class CommandProcessor {
                 length = contentBytes.length;
                 log.warning("Peer misreported content length, correcting.");
             }
-            contentBB = ByteBuffer.allocate((int)length);
+            contentBB = ByteBuffer.allocate((int) length);
             contentBB.put(contentBytes);
             contentBB.position(0);
         } catch (IllegalArgumentException e) {
@@ -328,8 +336,7 @@ public class CommandProcessor {
                     // this must be run as final step to write file
                     fileSystemManager.checkWriteComplete(pathName);
                 }
-            }
-            else {
+            } else {
                 log.severe("Failed to write bytes to " + pathName);
                 fileSystemManager.cancelFileLoader(pathName);
             }
@@ -349,14 +356,15 @@ public class CommandProcessor {
     /**
      * Writes the reply message for all file related requests e.g. FILE_CREATE, FILE_DELETE,
      * FILE_MODIFY
-     * @param response the response command to send
+     *
+     * @param response       the response command to send
      * @param fileDescriptor the description of the file as a Document object
-     * @param pathName the path of the file
-     * @param status whether the request was successfully fulfilled
-     * @param message details of why the request succeeded/failed
+     * @param pathName       the path of the file
+     * @param status         whether the request was successfully fulfilled
+     * @param message        details of why the request succeeded/failed
      */
     private void fileRelatedReply(String response, Document fileDescriptor, String pathName,
-                                        Boolean status, String message) {
+                                  Boolean status, String message) {
         Document replyMsg = new Document();
         replyMsg.append(Commands.COMMAND, response);
         replyMsg.append(Commands.FILE_DESCRIPTOR, fileDescriptor);
@@ -368,13 +376,14 @@ public class CommandProcessor {
 
     /**
      * Writes the reply message for all directory related requests e.g. DIR_CREATE, DIR_DELETE
+     *
      * @param response the response command to send
      * @param pathName the path of the file
-     * @param status whether the request was successfully fulfilled
-     * @param message details of why the request succeeded/failed
+     * @param status   whether the request was successfully fulfilled
+     * @param message  details of why the request succeeded/failed
      */
     private void dirRelatedReply(String response, String pathName, String message,
-                                       Boolean status) {
+                                 Boolean status) {
         Document replyMsg = new Document();
         replyMsg.append(Commands.COMMAND, response);
         replyMsg.append(Commands.PATH_NAME, pathName);
@@ -386,10 +395,11 @@ public class CommandProcessor {
     /**
      * Generate a request to the peer for a section of a file. The maximum number of bytes read is
      * controlled by the blockSize configuration value.
+     *
      * @param fileDescriptor the description of the file as a Document object
-     * @param pathName the path of the file
-     * @param position byte offset to start reading from
-     * @param fileSize the total size of the file
+     * @param pathName       the path of the file
+     * @param position       byte offset to start reading from
+     * @param fileSize       the total size of the file
      */
     private void requestBytes(Document fileDescriptor, String pathName, long position, long fileSize) {
         Document msg = new Document();
@@ -410,16 +420,17 @@ public class CommandProcessor {
 
     /**
      * Send bytes from a file to the peer.
+     *
      * @param fileDescriptor the description of the file as a Document object
-     * @param pathName the path of the file
-     * @param position the byte offset in the file where this data starts from
-     * @param length the length of the data being sent
-     * @param content data to be sent. Should be base64 encoded.
-     * @param message details of why the request succeeded/failed
-     * @param status whether the request was successfully fulfilled
+     * @param pathName       the path of the file
+     * @param position       the byte offset in the file where this data starts from
+     * @param length         the length of the data being sent
+     * @param content        data to be sent. Should be base64 encoded.
+     * @param message        details of why the request succeeded/failed
+     * @param status         whether the request was successfully fulfilled
      */
     private void returnBytes(Document fileDescriptor, String pathName, long position, long length,
-                                           String content, String message, Boolean status) {
+                             String content, String message, Boolean status) {
         Document msg = new Document();
         msg.append(Commands.COMMAND, Commands.FILE_BYTES_RESPONSE);
         msg.append(Commands.FILE_DESCRIPTOR, fileDescriptor);

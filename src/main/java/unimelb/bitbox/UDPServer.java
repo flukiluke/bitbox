@@ -16,6 +16,7 @@ public class UDPServer extends Server {
 
     /**
      * Create server thread with a list of already-established connections
+     *
      * @throws NumberFormatException
      * @throws NoSuchAlgorithmException
      * @throws IOException
@@ -52,11 +53,10 @@ public class UDPServer extends Server {
             if (c instanceof UDPConnection &&
                     c.remoteAddress.getAddress().equals(packet.getAddress()) &&
                     c.remoteAddress.getPort() == packet.getPort()) {
-                recipients.add((UDPConnection)c);
+                recipients.add((UDPConnection) c);
             }
         }
         if (recipients.size() == 0) {
-            log.warning("Packet from new peer");
             // Packet from new peer
             return null;
         }

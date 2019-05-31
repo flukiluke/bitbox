@@ -13,6 +13,7 @@ public class TCPServer extends Server {
 
     /**
      * Create server thread with a list of already-established connections
+     *
      * @throws NumberFormatException
      * @throws NoSuchAlgorithmException
      * @throws IOException
@@ -24,6 +25,7 @@ public class TCPServer extends Server {
 
     /**
      * Main loop for server thread. accept() an incoming connection and spawn a new IO thread to handle it.
+     *
      * @throws IOException
      */
     public void mainLoop() throws IOException {

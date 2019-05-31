@@ -2,17 +2,17 @@ package unimelb.bitbox;
 
 /**
  * Convenient list of string literals that appear in the BitBox protocol and configuation.
- *
+ * <p>
  * Because auto-complete is a wonderful thing.
  *
  * @author TransfictionRailways
  */
 public class Commands {
-	// list of line commands
-	public final static String LIST_PEERS = "list_peers";
-	public final static String CONNECT_PEER = "connect_peer";
-	public final static String DISCONNECT_PEER = "disconnect_peer";
-	
+    // list of line commands
+    public final static String LIST_PEERS = "list_peers";
+    public final static String CONNECT_PEER = "connect_peer";
+    public final static String DISCONNECT_PEER = "disconnect_peer";
+
     // list of protocol commands
     public final static String INVALID_PROTOCOL = "INVALID_PROTOCOL";
     public final static String CONNECTION_REFUSED = "CONNECTION_REFUSED";
@@ -33,10 +33,10 @@ public class Commands {
     public final static String DIRECTORY_CREATE_RESPONSE = "DIRECTORY_CREATE_RESPONSE";
     public final static String DIRECTORY_DELETE_RESPONSE = "DIRECTORY_DELETE_RESPONSE";
     public final static String FILE_BYTES_RESPONSE = "FILE_BYTES_RESPONSE";
-    
+
     public final static String AUTH_REQUEST = "AUTH_REQUEST";
     public final static String AUTH_RESPONSE = "AUTH_RESPONSE";
-    
+
     public final static String LIST_PEERS_REQUEST = "LIST_PEERS_REQUEST";
     public final static String LIST_PEERS_RESPONSE = "LIST_PEERS_RESPONSE";
     public final static String CONNECT_PEER_REQUEST = "CONNECT_PEER_REQUEST";
@@ -64,6 +64,6 @@ public class Commands {
     public final static String PEERS = "peers";
     public static final String SYNC_INTERVAL = "syncInterval";
     public static final String IDENTITY = "identity";
-	public static final String AES128 = "AES128";
-	public static final String PAYLOAD = "payload";
+    public static final String AES128 = "AES128";
+    public static final String PAYLOAD = "payload";
 }

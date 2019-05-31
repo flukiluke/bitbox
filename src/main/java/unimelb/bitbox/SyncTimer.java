@@ -25,7 +25,8 @@ public class SyncTimer extends TimerTask {
     /**
      * Start the sync events timer. Every so often (interval controlled by the syncInterval config option),
      * asks the file system manager for sync events and feeds to the main server object.
-     * @param server The servermain instance controlling IO threads
+     *
+     * @param server            The servermain instance controlling IO threads
      * @param fileSystemManager An instance of the file system manager
      */
     public static void startEvents(FileSystemObserver server, FileSystemManager fileSystemManager) {

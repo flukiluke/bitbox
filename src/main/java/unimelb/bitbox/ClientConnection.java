@@ -14,13 +14,18 @@ import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Base64;
 
+/**
+ * Connection between a client and a server peer. This handles both ends of the connection.
+ *
+ * @author TransfictionRailways
+ */
 public class ClientConnection extends Connection {
     private Socket clientSocket;
     private BufferedWriter outStream;
     private BufferedReader inStream;
     private CmdLineArgs clientArgs;
     private ClientCommandProcessor clientCommandProcessor;
-    private byte[] secretKey;
+    private byte[] secretKey; // Used for AES encryption of the connection
 
     /**
      * Connection from client to peer. Starts a new thread.
@@ -68,8 +73,10 @@ public class ClientConnection extends Connection {
         connectionState = ConnectionState.CONNECTED;
         try {
             if (!isIncomingConnection) {
+                // Send initial command if we are client
                 sendClientCommand();
             }
+            // In both cases, handle what we receive
             Document msgIn = receiveMessageFromPeer();
             if (msgIn.getString(Commands.COMMAND).equals(Commands.INVALID_PROTOCOL)) {
                 // That's unfortunate
@@ -80,17 +87,25 @@ public class ClientConnection extends Connection {
             }
             ArrayList<Document> msgsOut;
             msgsOut = clientCommandProcessor.handleMessage(msgIn);
+            // Then output any final response (will only happen if we are the server)
             for (Document msg : msgsOut) {
                 sendMessageToPeer(msg);
             }
         } catch (IOException e) {
-            log.severe("Communication to " + this.remoteAddress + " failed, IO thread exiting (" + e.getMessage() + ")");
+            log.severe("Communication to " + this.remoteAddress + " failed, IO thread exiting (" + e.getMessage() +
+                    ")");
         } catch (BadMessageException e) {
             terminateConnection(e.getMessage());
         }
         connectionState = ConnectionState.DONE;
     }
 
+    /**
+     * Setup connection between client and server securely.
+     *
+     * @return true if connection is successfully established
+     */
+    @Override
     protected boolean initialise() {
         boolean success;
         try {
@@ -119,6 +134,11 @@ public class ClientConnection extends Connection {
         return true;
     }
 
+    /**
+     * Send one of the client commands to the server with appropriate data
+     *
+     * @throws IOException If communication fails
+     */
     private void sendClientCommand() throws IOException {
         Document doc = new Document();
         switch (clientArgs.getCommand()) {
@@ -142,9 +162,6 @@ public class ClientConnection extends Connection {
         }
         sendMessageToPeer(doc);
     }
-
-
-
 
     /**
      * Perform the authentication challenge as the initiating party.
@@ -251,8 +268,7 @@ public class ClientConnection extends Connection {
         String encrypted;
         try {
             encrypted = AES.encrypt(message.toJson() + "\n", secretKey);
-        }
-        catch (GeneralSecurityException e) {
+        } catch (GeneralSecurityException e) {
             throw new IOException("Security error: " + e.getLocalizedMessage());
         }
         doc.append(Commands.PAYLOAD, encrypted);
@@ -270,13 +286,17 @@ public class ClientConnection extends Connection {
         }
         Document doc = Document.parse(input);
         if (connectionState == ConnectionState.CONNECTED) {
-            doc = decryptMessage(doc);
+            try {
+                doc = decryptMessage(doc);
+            } catch (GeneralSecurityException e) {
+                throw new IOException("Decryption error");
+            }
         }
         log.info("Received message from peer: " + doc);
         return doc;
     }
 
-    private Document decryptMessage(Document doc) throws BadMessageException {
+    private Document decryptMessage(Document doc) throws BadMessageException, GeneralSecurityException {
         String encrypted = doc.getString(Commands.PAYLOAD);
         String decrypted;
         decrypted = AES.decrypt(encrypted, secretKey);
