@@ -11,11 +11,7 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.logging.Logger;
 import java.util.Base64;
 
-import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -53,15 +49,11 @@ public class RSA {
         return cipherData;
     }
 
-    public static byte[] decrypt(String input) throws InvalidKeyException,
-            NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException,
-            BadPaddingException {
+    public static byte[] decrypt(String input) throws GeneralSecurityException {
         return decrypt(Base64.getDecoder().decode(input.getBytes()));
     }
 
-    public static byte[] decrypt(byte[] data) throws NoSuchAlgorithmException,
-            NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException,
-            BadPaddingException {
+    public static byte[] decrypt(byte[] data) throws GeneralSecurityException {
         PrivateKey privKey = getPrivate();
         Cipher cipher;
         cipher = Cipher.getInstance("RSA");

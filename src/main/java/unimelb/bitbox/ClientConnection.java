@@ -253,7 +253,7 @@ public class ClientConnection extends Connection {
             encrypted = AES.encrypt(message.toJson() + "\n", secretKey);
         }
         catch (GeneralSecurityException e) {
-            throw new IOException("Security error");
+            throw new IOException("Security error: " + e.getLocalizedMessage());
         }
         doc.append(Commands.PAYLOAD, encrypted);
         return doc.toJson() + "\n";
