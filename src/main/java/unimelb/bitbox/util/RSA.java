@@ -3,6 +3,7 @@ package unimelb.bitbox.util;
 //snippets from https://stackoverflow.com/questions/47816938/java-ssh-rsa-string-to-public-key
 //https://www.devglan.com/java8/rsa-encryption-decryption-java
 
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.*;
@@ -13,9 +14,6 @@ import java.util.Base64;
 
 import javax.crypto.Cipher;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.math.BigInteger;
 import java.security.spec.RSAPublicKeySpec;
 
@@ -25,6 +23,12 @@ import com.google.common.base.Splitter;
 import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.google.common.base.Charsets;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openssl.PEMEncryptedKeyPair;
+import org.bouncycastle.openssl.PEMKeyPair;
+import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.bc.BcPEMDecryptorProvider;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.Iterables.get;
@@ -33,9 +37,14 @@ import static com.google.common.collect.Iterables.size;
 
 public class RSA {
     private static final String SSH_MARKER = "ssh-rsa";
+    private static final String PRIVATE_KEY_FILE = "bitboxclient_rsa";
 
     private static ByteSource supplier;
     private static Logger log = Logger.getLogger(RSA.class.getName());
+
+    static {
+        Security.addProvider(new BouncyCastleProvider());
+    }
 
     public static byte[] encrypt(String keyString, byte[] bytes) throws GeneralSecurityException {
         SSHEncodedToRSAPublicConverter(keyString);
@@ -49,12 +58,12 @@ public class RSA {
         return cipherData;
     }
 
-    public static byte[] decrypt(String input) throws GeneralSecurityException {
+    public static byte[] decrypt(String input) throws IOException, GeneralSecurityException {
         return decrypt(Base64.getDecoder().decode(input.getBytes()));
     }
 
-    public static byte[] decrypt(byte[] data) throws GeneralSecurityException {
-        PrivateKey privKey = getPrivate();
+    public static byte[] decrypt(byte[] data) throws IOException, GeneralSecurityException {
+        PrivateKey privKey = getPrivateKey();
         Cipher cipher;
         cipher = Cipher.getInstance("RSA");
         cipher.init(Cipher.DECRYPT_MODE, privKey);
@@ -62,20 +71,18 @@ public class RSA {
     }
 
 
-    public static PrivateKey getPrivate() {
-        try {
-
-            String filename = "bitboxclient_rsa.der";
-            byte[] keyBytes = Files.readAllBytes(Paths.get(filename));
-
-            PKCS8EncodedKeySpec spec =
-                    new PKCS8EncodedKeySpec(keyBytes);
-            KeyFactory kf = KeyFactory.getInstance("RSA");
-            return kf.generatePrivate(spec);
-        } catch (Exception e) {
-            log.severe(e.getMessage());
+    public static PrivateKey getPrivateKey() throws IOException {
+        FileReader fileReader = new FileReader(PRIVATE_KEY_FILE);
+        PEMParser pemParser = new PEMParser(fileReader);
+        Object pemObject;
+        pemObject = pemParser.readObject();
+        pemParser.close();
+        fileReader.close();
+        if (!(pemObject instanceof PEMKeyPair)) {
+            throw new IOException("File " + PRIVATE_KEY_FILE + " does not contain an unencrypted key pair");
         }
-        return null;
+        KeyPair kp = new JcaPEMKeyConverter().setProvider("BC").getKeyPair((PEMKeyPair)pemObject);
+        return kp.getPrivate();
     }
 
 
