@@ -26,6 +26,7 @@ public abstract class Connection extends Thread {
     public HostPort remoteHostPort; // This is the address/port the peer tells us
     public InetSocketAddress remoteAddress; // The is the address/port the connection is actually coming from
     public boolean isIncomingConnection;
+    public boolean isClient = false;
 
     public enum ConnectionState { CONNECTING, CONNECTED, DONE }
     public ConnectionState connectionState = ConnectionState.CONNECTING;
@@ -129,7 +130,7 @@ public abstract class Connection extends Thread {
     protected boolean receiveHandshake() throws IOException, BadMessageException {
         Document request = receiveMessageFromPeer();
         if (!request.getString(Commands.COMMAND).equals(Commands.HANDSHAKE_REQUEST)) {
-            throw new BadMessageException("Peer " + this.remoteAddress + " did not open with handshake request");
+        	throw new BadMessageException("Peer " + this.remoteAddress + " did not open with handshake request");
         }
         remoteHostPort = new HostPort(request.getDocument(Commands.HOST_PORT));
         if (server.countIncomingConnections() >=

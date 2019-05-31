@@ -1,6 +1,7 @@
 package unimelb.bitbox;
 
 import unimelb.bitbox.util.Document;
+import unimelb.bitbox.util.HostPort;
 
 import java.io.*;
 import java.net.InetSocketAddress;
