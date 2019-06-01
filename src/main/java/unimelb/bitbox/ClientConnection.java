@@ -214,8 +214,8 @@ public class ClientConnection extends Connection {
         Boolean foundKey = false;
         String publicKey = "";
         for (String key : Configuration.getConfigurationValue("authorized_keys").split(",")) {
-            publicKey = key;
-            String identity = key.split(" ")[2];
+            publicKey = key.trim();
+            String identity = publicKey.split(" ")[2];
             if (identity.equals(request.get("identity"))) {
                 foundKey = true;
                 break;
