@@ -24,7 +24,6 @@ public class Client {
                 "%5$s%n");
         log.info("BitBox Client starting...");
 
-        Configuration.getConfiguration();
         CmdLineArgs cmdLineArgs = Configuration.parseClientCmdLineArgs(args);
         HostPort server = new HostPort(cmdLineArgs.getServer());
         ClientConnection connection = new ClientConnection(new Socket(server.host, server.port), cmdLineArgs);
