@@ -27,7 +27,7 @@ public class UDPServer extends Server {
     }
 
     public void mainLoop() throws IOException {
-        byte[] inBuffer = new byte[8192];
+        byte[] inBuffer = new byte[8192 * 2]; // High-ball the buffer size to be on the safe side
         DatagramPacket packet = new DatagramPacket(inBuffer, inBuffer.length);
         String message;
         while (true) {
@@ -49,11 +49,13 @@ public class UDPServer extends Server {
 
     private UDPConnection findRelevantConnection(DatagramPacket packet) {
         List<UDPConnection> recipients = new ArrayList<>();
-        for (Connection c : connections) {
-            if (c instanceof UDPConnection &&
-                    c.remoteAddress.getAddress().equals(packet.getAddress()) &&
-                    c.remoteAddress.getPort() == packet.getPort()) {
-                recipients.add((UDPConnection) c);
+        synchronized (connections) {
+            for (Connection c : connections) {
+                if (c instanceof UDPConnection &&
+                        c.remoteAddress.getAddress().equals(packet.getAddress()) &&
+                        c.remoteAddress.getPort() == packet.getPort()) {
+                    recipients.add((UDPConnection) c);
+                }
             }
         }
         if (recipients.size() == 0) {

@@ -44,6 +44,7 @@ public class UDPConnection extends Connection {
                 log.severe("Did not connect to " + this.remoteAddress);
                 return false;
             }
+            clearHandshake();
         } catch (IOException e) {
             log.severe("Setting up new peer connection failed, IO thread for "
                     + this.remoteAddress + " exiting");
@@ -94,7 +95,6 @@ public class UDPConnection extends Connection {
         }
         Document doc = Document.parse(input);
         // log.info("Received message from peer: " + doc);
-        // Normally I'd use Collection::removeIf but it seems to have trouble with checked exceptions
         synchronized (activeMessages) {
             for (Iterator<Message> iterator = activeMessages.listIterator(); iterator.hasNext(); ) {
                 Message m = iterator.next();
@@ -117,6 +117,19 @@ public class UDPConnection extends Connection {
                 m.resendIfNeeded();
             }
         }
+    }
+
+    // Remove any handshake messages in the queue. This is allows more freedom for when two peers try connect
+    // to each other at the same time.
+    private void clearHandshake() {
+        activeMessages.removeIf(m -> {
+            try {
+                String command = m.request.getString(Commands.COMMAND);
+                return command == Commands.HANDSHAKE_REQUEST || command == Commands.HANDSHAKE_RESPONSE;
+            } catch (BadMessageException e) {
+                return false;
+            }
+        });
     }
 
     private class Message {
@@ -143,7 +156,6 @@ public class UDPConnection extends Connection {
                 throw new IOException("Message retry limit reached");
             }
             ((UDPServer) server).send(packet);
-            System.out.println("Packet resent");
             lastSendTime = System.currentTimeMillis();
         }
 

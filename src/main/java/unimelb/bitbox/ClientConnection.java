@@ -120,7 +120,7 @@ public class ClientConnection extends Connection {
                 success = authRequest();
             }
             if (!success) {
-                log.severe("Did not connect to " + this.remoteAddress);
+                log.severe("Authentication failed, exiting");
                 return false;
             }
         } catch (IOException e) {
@@ -260,7 +260,7 @@ public class ClientConnection extends Connection {
             outStream.write(content);
             outStream.flush();
         }
-        log.info("Sent message to peer: " + message);
+        // log.info("Sent message to peer: " + message);
     }
 
     private String encryptMessage(Document message) throws IOException {
@@ -292,7 +292,7 @@ public class ClientConnection extends Connection {
                 throw new IOException("Decryption error");
             }
         }
-        log.info("Received message from peer: " + doc);
+        // log.info("Received message from peer: " + doc);
         return doc;
     }
 

@@ -92,6 +92,7 @@ public abstract class Connection extends Thread {
         } catch (BadMessageException e) {
             terminateConnection(e.getMessage());
         }
+        closeConnection();
         connectionState = ConnectionState.DONE;
         server.reapConnections();
     }
@@ -222,7 +223,7 @@ public abstract class Connection extends Thread {
      * @param errorMessage Human-readable explanation of why they are being disconnected
      */
     protected void terminateConnection(String errorMessage) {
-        log.severe("Peer " + this.remoteAddress + " sent invalid message, terminating connection with prejudice");
+        log.severe("Peer " + this.remoteAddress + " sent invalid message, terminating connection with prejudice: " + errorMessage);
         Document doc = new Document();
         doc.append(Commands.COMMAND, Commands.INVALID_PROTOCOL);
         doc.append(Commands.MESSAGE, errorMessage);

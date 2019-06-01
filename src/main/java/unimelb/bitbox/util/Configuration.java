@@ -25,22 +25,21 @@ import java.util.logging.Logger;
  * String[] peers = Configuration.getConfigurationValue("peers").split(",");
  * }
  * </pre>
- *
+ * <p>
  * Also allows setting command line arguments to override configuration values:
  * <pre>
  * {@code
  * ~$ java -jar bitbox.jar --port=8122
  * }
  * </pre>
+ *
  * @author aaron
  * @author TransfictionRailways
- *
  */
 public class Configuration {
-	private static Logger log = Logger.getLogger(Configuration.class.getName());
+    private static Logger log = Logger.getLogger(Configuration.class.getName());
     // the configuration file is stored in the root of the class path as a .properties file
     private static final String CONFIGURATION_FILE = "configuration.properties";
-
     private static Properties properties;
 
     // use static initializer to read the configuration file when the class is loaded
@@ -54,8 +53,8 @@ public class Configuration {
         }
     }
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-	public static Map<String, String> getConfiguration() {
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public static Map<String, String> getConfiguration() {
         // ugly workaround to get String as generics
         Map temp = properties;
         Map<String, String> map = new HashMap<String, String>(temp);
@@ -68,8 +67,10 @@ public class Configuration {
         return properties.getProperty(key);
     }
 
-    /** Compute the host-port combination we want to be known as.
+    /**
+     * Compute the host-port combination we want to be known as.
      * This is not a directly-set value but a composition of configuration values.
+     *
      * @return Document containing host and port values
      */
     public static Document getLocalHostPort() {
@@ -83,7 +84,8 @@ public class Configuration {
     private Configuration() {
     }
 
-    /** Read command line and override any configuration values.
+    /**
+     * Read command line and override any configuration values.
      *
      * @param args The args array passed to main()
      */
@@ -100,35 +102,47 @@ public class Configuration {
         }
     }
 
+    /**
+     * Magic numbers time! For UDP, our packet must not be bigger than 8192 bytes. We allow 1000 bytes for JSON overhead
+     * and other metadata, leaving 7192 bytes for base64 data. base64 makes everything bigger by a factor of 4/3, giving
+     * 5394. Finally, round it down to a nice round number.
+     *
+     * @return Maximum data block size
+     */
     public static int getBlockSize() {
-        return Math.min(8192 / 3 - 300, Integer.parseInt(Configuration.getConfigurationValue("blockSize")));
+        if (getConfigurationValue("mode").equals("udp")) {
+            return Math.min(5000,
+                    Integer.parseInt(Configuration.getConfigurationValue("blockSize")));
+        } else {
+            return Integer.parseInt(Configuration.getConfigurationValue("blockSize"));
+        }
     }
 
-
-    /**Read command line and override any configuration values.
+    /**
+     * Read command line and override any configuration values.
      *
      * @param args The args array passed to main()
      * @return CmdLineArgs containing commands and required parameters for command
      */
     public static CmdLineArgs parseClientCmdLineArgs(String[] args) {
- 		//Object that will store the parsed command line arguments
- 		CmdLineArgs argsBean = new CmdLineArgs();
- 		
- 		//Parser provided by args4j
- 		CmdLineParser parser = new CmdLineParser(argsBean);
- 		try {
- 			
- 			//Parse the arguments
- 			parser.parseArgument(args);
- 			
- 		} catch (CmdLineException e) {
- 			
- 			System.err.println(e.getMessage());
- 			
- 			//Print the usage to help the user understand the arguments expected
- 			//by the program
- 			parser.printUsage(System.err);
- 		}
- 		return argsBean;
+        //Object that will store the parsed command line arguments
+        CmdLineArgs argsBean = new CmdLineArgs();
+
+        //Parser provided by args4j
+        CmdLineParser parser = new CmdLineParser(argsBean);
+        try {
+
+            //Parse the arguments
+            parser.parseArgument(args);
+
+        } catch (CmdLineException e) {
+
+            System.err.println(e.getMessage());
+
+            //Print the usage to help the user understand the arguments expected
+            //by the program
+            parser.printUsage(System.err);
+        }
+        return argsBean;
     }
 }

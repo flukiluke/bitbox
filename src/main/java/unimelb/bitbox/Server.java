@@ -44,18 +44,21 @@ public abstract class Server extends Thread implements FileSystemObserver {
     }
 
     public Boolean connectPeers(List<HostPort> peers) {
-        try {
-            for (HostPort peer : peers) {
-                InetSocketAddress remoteAddress = new InetSocketAddress(peer.host, peer.port);
-                if (Peer.udpMode) {
-                    new UDPConnection((UDPServer) this, remoteAddress, false);
-                } else {
-                    new TCPConnection((TCPServer) this, remoteAddress);
+        synchronized (connections) {
+            reapConnections();
+            try {
+                for (HostPort peer : peers) {
+                    InetSocketAddress remoteAddress = new InetSocketAddress(peer.host, peer.port);
+                    if (Peer.udpMode) {
+                        new UDPConnection((UDPServer) this, remoteAddress, false);
+                    } else {
+                        new TCPConnection((TCPServer) this, remoteAddress);
+                    }
                 }
+                return true;
+            } catch (Exception e) {
+                return false;
             }
-            return true;
-        } catch (Exception e) {
-            return false;
         }
     }
 
@@ -154,32 +157,28 @@ public abstract class Server extends Thread implements FileSystemObserver {
         connections.removeIf(c -> c.connectionState == Connection.ConnectionState.DONE);
     }
 
-    /**
-     * Dump the connections list for debugging purposes
-     */
-    protected void showConnections() {
-        if (connections.size() == 0) {
-            return;
-        }
-        log.info("Connection list:");
-        synchronized (connections) {
-            for (Connection con : connections) {
-                log.info(String.format("%s at %s (%s)", con.remoteHostPort, con.remoteAddress, con.connectionState));
-            }
-        }
-    }
-
     public Boolean disconnectPeer(HostPort peer) {
-        InetSocketAddress remoteAddress = new InetSocketAddress(peer.host, peer.port);
-        for (Connection connection : connections) {
-            if (connection.remoteHostPort.port == peer.port
-                    && connection.remoteAddress.getAddress().equals(remoteAddress.getAddress())) {
-                connection.closeConnection();
-                connection.interrupt();
-                return true;
-            }
+        Connection connection = getMatchingConnection(peer);
+        if (connection != null) {
+            connection.interrupt();
+            return true;
         }
         return false;
+    }
+
+    protected Connection getMatchingConnection(HostPort peer) {
+        InetSocketAddress remoteAddress = new InetSocketAddress(peer.host, peer.port);
+        synchronized (connections) {
+            for (Connection connection : connections) {
+
+                if (connection.remoteHostPort != null
+                        && connection.remoteHostPort.port == peer.port
+                        && connection.remoteAddress.getAddress().equals(remoteAddress.getAddress())
+                        && connection.connectionState != Connection.ConnectionState.DONE)
+                    return connection;
+            }
+            return null;
+        }
     }
 
 }
